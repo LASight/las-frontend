@@ -1,0 +1,340 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(7, 14, 20, 0.82);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+.dialog {
+  background: var(--bg-1);
+  border: 1px solid var(--line);
+  border-radius: 0.75rem;
+  width: min(860px, 100%);
+  max-height: 88vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.dialogHeader {
+  padding: 1.1rem 1.4rem 0.9rem;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.dialogTitle {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.dialogSubtitle {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.dialogBody {
+  padding: 1rem 1.4rem;
+  overflow-y: auto;
+  display: grid;
+  gap: 0.75rem;
+  flex: 1;
+}
+
+.dialogFooter {
+  padding: 0.9rem 1.4rem;
+  border-top: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.6rem;
+}
+
+/* File card */
+.fileCard {
+  border: 1px solid var(--line);
+  border-radius: 0.5rem;
+  overflow: hidden;
+  background: var(--bg-2);
+}
+
+.fileCardHeader {
+  padding: 0.65rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  cursor: pointer;
+  user-select: none;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.fileCardHeader:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.fileCardName {
+  flex: 1;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--ink);
+  font-family: "IBM Plex Mono", monospace;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fileCardMeta {
+  font-size: 0.75rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.chevron {
+  color: var(--muted);
+  font-size: 0.7rem;
+  transition: transform 160ms ease;
+}
+
+.chevronOpen {
+  transform: rotate(90deg);
+}
+
+.fileCardBody {
+  padding: 0.75rem 1rem 0.9rem;
+  display: grid;
+  gap: 0.65rem;
+  border-top: 1px solid var(--line);
+}
+
+/* Summary row */
+.summaryGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 0.4rem 0.75rem;
+}
+
+.summaryItem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.summaryLabel {
+  font-size: 0.68rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.summaryValue {
+  font-size: 0.82rem;
+  color: var(--ink);
+  font-family: "IBM Plex Mono", monospace;
+}
+
+/* Issues */
+.issueList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.25rem;
+}
+
+.issue {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  color: var(--ink);
+  padding: 0.3rem 0.5rem;
+  border-radius: 0.3rem;
+}
+
+.issueError {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+}
+
+.issueWarn {
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.2);
+}
+
+.issueInfo {
+  background: rgba(96, 165, 250, 0.08);
+  border: 1px solid rgba(96, 165, 250, 0.15);
+}
+
+.issueIcon {
+  font-size: 0.78rem;
+  margin-top: 0.05rem;
+  flex-shrink: 0;
+}
+
+/* Controls */
+.controls {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 0.4rem 0.75rem;
+  padding: 0.55rem 0.7rem;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 0.35rem;
+  border: 1px solid var(--line);
+}
+
+.controlGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.controlLabel {
+  font-size: 0.7rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.controlSelect,
+.controlInput {
+  background: var(--bg-0);
+  border: 1px solid rgba(166, 197, 217, 0.22);
+  border-radius: 0.3rem;
+  color: var(--ink);
+  font-size: 0.8rem;
+  padding: 0.3rem 0.5rem;
+  font-family: "IBM Plex Mono", monospace;
+  width: 100%;
+}
+
+.controlSelect:focus,
+.controlInput:focus {
+  outline: none;
+  border-color: #4dd7f6;
+}
+
+.checkRow {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  color: var(--ink);
+  margin-top: 0.25rem;
+  cursor: pointer;
+}
+
+/* Parsing warnings collapsible */
+.warningsToggle {
+  font-size: 0.75rem;
+  color: var(--muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.warningsToggle:hover {
+  color: var(--ink);
+}
+
+.warningsList {
+  list-style: none;
+  margin: 0.3rem 0 0;
+  padding: 0.4rem 0.6rem;
+  background: rgba(255, 255, 255, 0.025);
+  border-radius: 0.3rem;
+  border: 1px solid var(--line);
+  display: grid;
+  gap: 0.15rem;
+}
+
+.warningsListItem {
+  font-size: 0.75rem;
+  color: var(--muted);
+  font-family: "IBM Plex Mono", monospace;
+  word-break: break-word;
+}
+
+/* Badge */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.3rem;
+  height: 1.3rem;
+  padding: 0 0.35rem;
+  border-radius: 99px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  font-family: "IBM Plex Mono", monospace;
+}
+
+.badgeError {
+  background: rgba(239, 68, 68, 0.18);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.badgeWarn {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.25);
+}
+
+.badgeOk {
+  background: rgba(52, 211, 153, 0.12);
+  color: #34d399;
+  border: 1px solid rgba(52, 211, 153, 0.2);
+}
+
+/* Buttons */
+.btnCancel {
+  padding: 0.45rem 1rem;
+  border-radius: 0.35rem;
+  border: 1px solid rgba(166, 197, 217, 0.22);
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: color 120ms, border-color 120ms;
+}
+
+.btnCancel:hover {
+  color: var(--ink);
+  border-color: rgba(166, 197, 217, 0.4);
+}
+
+.btnProceed {
+  padding: 0.45rem 1.1rem;
+  border-radius: 0.35rem;
+  border: none;
+  background: #4dd7f6;
+  color: #0b1217;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 120ms;
+}
+
+.btnProceed:hover:not(:disabled) {
+  opacity: 0.88;
+}
+
+.btnProceed:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}

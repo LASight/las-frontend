@@ -4,6 +4,7 @@ import Plot from "react-plotly.js";
 import styles from "./app.module.css";
 import { AssistantDrawer } from "./components/assistant-drawer";
 import { EmptyPlot } from "./components/empty-plot";
+import { FileValidationModal } from "./components/FileValidationModal";
 import { MetricCard } from "./components/metric-card";
 import { PlotCard } from "./components/plot-card";
 import { SectionPanel } from "./components/section-panel";
@@ -568,6 +569,17 @@ export default function App() {
   const payload = analysis.payload;
 
   return (
+    <>
+    {analysis.fileValidation.state === "confirming" && analysis.fileValidation.validationPayload && (
+      <FileValidationModal
+        reports={analysis.fileValidation.validationPayload.files}
+        onConfirm={(decisions) => void analysis.proceedWithAnalysis(decisions)}
+        onCancel={() => {
+          analysis.fileValidation.cancel();
+          analysis.setStatus("Cancelled.");
+        }}
+      />
+    )}
     <main
       className={`${styles.shell} ${demoMode ? styles.demoMode : ""} ${
         assistantOpen ? styles.shellDocked : ""
@@ -1086,5 +1098,6 @@ export default function App() {
         onWidthChange={setAssistantWidth}
       />
     </main>
+    </>
   );
 }

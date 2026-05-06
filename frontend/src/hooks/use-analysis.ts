@@ -2,12 +2,13 @@ import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 
 import { statusMeta } from "../controllers/format-controller";
-import type { AnalyzePayload } from "../models/analyze-models";
+import type { AnalyzePayload, ValidationDecision } from "../models/analyze-models";
 import {
   analyzeSamples,
   analyzeUploads,
   fetchAiInterpretation,
 } from "../services/api-service";
+import { useFileValidation } from "./use-file-validation";
 
 type Options = {
   onNewAnalysis?: (payload: AnalyzePayload) => void;
@@ -21,6 +22,7 @@ export function useAnalysis(options: Options = {}) {
   const [aiText, setAiText] = useState("");
   const [aiMeta, setAiMeta] = useState("Source: N/A");
   const [fileList, setFileList] = useState<FileList | null>(null);
+  const fileValidation = useFileValidation();
 
   const sampleMutation = useMutation({
     mutationFn: async () => analyzeSamples(),
@@ -29,7 +31,8 @@ export function useAnalysis(options: Options = {}) {
   });
 
   const uploadMutation = useMutation({
-    mutationFn: async (files: FileList) => analyzeUploads(files),
+    mutationFn: async ({ files, decisions }: { files: FileList; decisions?: ValidationDecision[] }) =>
+      analyzeUploads(files, decisions),
     onMutate: () => setStatus("Uploading files and running analysis..."),
     onError: (err: Error) => setStatus(`Error: ${err.message}`),
   });
@@ -74,7 +77,15 @@ export function useAnalysis(options: Options = {}) {
       setStatus("Select one or more LAS files first.");
       return;
     }
-    const nextPayload = await uploadMutation.mutateAsync(fileList);
+    fileValidation.reset();
+    setStatus("Validating files...");
+    await fileValidation.validate(fileList);
+  }
+
+  async function proceedWithAnalysis(decisions: ValidationDecision[]) {
+    if (!fileList) return;
+    fileValidation.reset();
+    const nextPayload = await uploadMutation.mutateAsync({ files: fileList, decisions });
     await handlePostAnalyze(nextPayload);
   }
 
@@ -91,6 +102,8 @@ export function useAnalysis(options: Options = {}) {
     setAiEnabled,
     runSampleAnalysis,
     runUploadAnalysis,
-    isBusy: sampleMutation.isPending || uploadMutation.isPending,
+    proceedWithAnalysis,
+    fileValidation,
+    isBusy: sampleMutation.isPending || uploadMutation.isPending || fileValidation.state === "validating",
   };
 }

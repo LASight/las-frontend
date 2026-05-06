@@ -1,4 +1,4 @@
-import type { AiResponse, AnalyzePayload, ChatResponse } from "../models/analyze-models";
+import type { AiResponse, AnalyzePayload, ChatResponse, PreValidatePayload, ValidationDecision } from "../models/analyze-models";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000";
 
@@ -16,10 +16,27 @@ export async function analyzeSamples(): Promise<AnalyzePayload> {
   });
 }
 
-export async function analyzeUploads(files: FileList | File[]): Promise<AnalyzePayload> {
+export async function preValidateFiles(files: FileList | File[]): Promise<PreValidatePayload> {
   const form = new FormData();
   for (const file of Array.from(files)) {
     form.append("files", file);
+  }
+  return apiRequest<PreValidatePayload>("/api/pre-validate", {
+    method: "POST",
+    body: form,
+  });
+}
+
+export async function analyzeUploads(
+  files: FileList | File[],
+  decisions?: ValidationDecision[]
+): Promise<AnalyzePayload> {
+  const form = new FormData();
+  for (const file of Array.from(files)) {
+    form.append("files", file);
+  }
+  if (decisions) {
+    form.append("decisions", JSON.stringify(decisions));
   }
   return apiRequest<AnalyzePayload>("/api/analyze-files?with_ai=false", {
     method: "POST",

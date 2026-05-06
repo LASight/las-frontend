@@ -216,3 +216,47 @@ export interface ChatResponse {
   answer: string;
   meta: { source?: string; model?: string; reason?: string };
 }
+
+export interface CurveValidation {
+  name: string;
+  unit: string;
+  missing_pct: number;
+  is_constant: boolean;
+}
+
+export type ValidationIssueSeverity = "error" | "warn" | "info";
+
+export interface FileValidationIssue {
+  severity: ValidationIssueSeverity;
+  code: string;
+  message: string;
+}
+
+export interface FileValidationReport {
+  file_name: string;
+  las_version: string;
+  well_name: string;
+  depth_range: [number, number] | null;
+  depth_unit: string;
+  depth_curve: string;
+  available_curves: string[];
+  null_value: number | null;
+  curve_count: number;
+  row_count: number;
+  curves: CurveValidation[];
+  issues: FileValidationIssue[];
+  parsing_warnings: string[];
+  can_proceed: boolean;
+}
+
+export interface PreValidatePayload {
+  files: FileValidationReport[];
+}
+
+export interface ValidationDecision {
+  file_name: string;
+  proceed: boolean;
+  depth_curve_override?: string;
+  null_value_override?: number;
+  sort_depth?: boolean;
+}
