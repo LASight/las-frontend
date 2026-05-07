@@ -1,0 +1,319 @@
+/* ── Sidebar container ──────────────────────────────────────── */
+.sidebar {
+  width: var(--sidebar-width);
+  min-width: var(--sidebar-width);
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--sb-bg-deep);
+  border-right: 1px solid var(--sb-line);
+  transition: width var(--sidebar-t), min-width var(--sidebar-t);
+  overflow: hidden;
+  position: relative;
+  z-index: 10;
+  flex-shrink: 0;
+}
+
+.collapsed {
+  width: var(--sidebar-collapsed);
+  min-width: var(--sidebar-collapsed);
+}
+
+/* ── Top bar ────────────────────────────────────────────────── */
+.sbTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 0.6rem 0 0.65rem;
+  border-bottom: 1px solid var(--sb-line);
+  min-height: 56px;
+  flex-shrink: 0;
+  gap: 0.4rem;
+}
+
+.logoArea {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  overflow: hidden;
+  flex: 1;
+  min-width: 0;
+}
+
+.logoMark {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background: linear-gradient(135deg, var(--accent-teal), var(--accent-green));
+  display: grid;
+  place-items: center;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #0b1217;
+  flex-shrink: 0;
+}
+
+.appName {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--sb-ink);
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: opacity var(--sidebar-t), max-width var(--sidebar-t);
+  max-width: 160px;
+}
+
+.collapseBtn {
+  background: transparent;
+  border: 1px solid var(--sb-line-s);
+  border-radius: 6px;
+  color: var(--sb-muted);
+  width: 26px;
+  height: 26px;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  font-size: 0.95rem;
+  flex-shrink: 0;
+  transition: color 140ms, background 140ms;
+  line-height: 1;
+}
+
+.collapseBtn:hover {
+  background: var(--sb-hover);
+  color: var(--sb-ink);
+}
+
+/* ── Scrollable body ────────────────────────────────────────── */
+.sbBody {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 0.5rem 0;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+}
+
+/* ── Section group ──────────────────────────────────────────── */
+.section {
+  padding: 0 0.4rem;
+  margin-bottom: 0.1rem;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.55rem 0.45rem 0.3rem;
+  color: var(--sb-muted);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.sectionIcon {
+  font-size: 0.78rem;
+  flex-shrink: 0;
+  width: 20px;
+  text-align: center;
+}
+
+/* ── Sidebar buttons ────────────────────────────────────────── */
+.sbBtn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.48rem 0.5rem;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--sb-ink);
+  font-size: 0.81rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 130ms;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  font-family: inherit;
+}
+
+.sbBtn:hover:not(:disabled) {
+  background: var(--sb-hover);
+}
+
+.sbBtn:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+}
+
+.sbBtnIcon {
+  font-size: 0.85rem;
+  width: 22px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.sbBtnLabel {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: opacity var(--sidebar-t), max-width var(--sidebar-t);
+  max-width: 200px;
+}
+
+/* Hide labels when collapsed */
+.collapsed .sbBtnLabel,
+.collapsed .appName {
+  max-width: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Accent variants */
+.sbBtnPrimary {
+  color: var(--accent-teal);
+}
+
+.sbBtnStrong {
+  color: var(--accent-orange);
+}
+
+/* ── Toggle rows ────────────────────────────────────────────── */
+.sbToggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 0.5rem;
+  color: var(--sb-muted);
+  font-size: 0.81rem;
+  cursor: pointer;
+  border-radius: 7px;
+  transition: background 130ms;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.sbToggle:hover {
+  background: var(--sb-hover);
+}
+
+.toggleInput {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.toggleTrack {
+  flex-shrink: 0;
+  width: 28px;
+  height: 16px;
+  border-radius: 999px;
+  background: var(--sb-line-s);
+  position: relative;
+  transition: background 180ms;
+  margin-left: auto;
+}
+
+.toggleTrack::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--sb-muted);
+  transition: transform 180ms, background 180ms;
+}
+
+.toggleOn {
+  background: rgba(56, 185, 217, 0.35);
+}
+
+.toggleOn::after {
+  transform: translateX(12px);
+  background: var(--accent-teal);
+}
+
+/* ── File input row ─────────────────────────────────────────── */
+.fileRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 0.5rem;
+  color: var(--sb-muted);
+  font-size: 0.81rem;
+  cursor: pointer;
+  border-radius: 7px;
+  border: 1px dashed var(--sb-line-s);
+  margin: 0.2rem 0 0.1rem;
+  transition: background 130ms, border-color 130ms;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.fileRow:hover {
+  background: var(--sb-hover);
+  border-color: rgba(56, 185, 217, 0.3);
+}
+
+.fileInput {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+/* ── Divider ────────────────────────────────────────────────── */
+.divider {
+  height: 1px;
+  background: var(--sb-line);
+  margin: 0.4rem 0.8rem;
+}
+
+/* ── Status area ────────────────────────────────────────────── */
+.sbStatus {
+  padding: 0.65rem 0.75rem;
+  border-top: 1px solid var(--sb-line);
+  min-height: 46px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
+
+.statusText {
+  margin: 0;
+  color: var(--sb-muted);
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.7rem;
+  line-height: 1.4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Mobile: sidebar as overlay ─────────────────────────────── */
+@media (max-width: 768px) {
+  .sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    z-index: 50;
+    transform: translateX(0);
+    box-shadow: 4px 0 20px rgba(0, 0, 0, 0.35);
+  }
+
+  .collapsed {
+    transform: translateX(-100%);
+    width: var(--sidebar-width);
+    min-width: var(--sidebar-width);
+  }
+}

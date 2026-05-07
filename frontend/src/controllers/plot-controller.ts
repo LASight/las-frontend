@@ -2,8 +2,8 @@ import type { Layout } from "plotly.js";
 
 export const PLOT_LAYOUT_BASE: Partial<Layout> = {
   paper_bgcolor: "rgba(0,0,0,0)",
-  plot_bgcolor: "rgba(10,18,26,0.65)",
-  font: { color: "#d9ecfa", family: "Space Grotesk, sans-serif" },
+  plot_bgcolor: "#f8f9fa",
+  font: { color: "#1e2533", family: "Space Grotesk, sans-serif" },
   margin: { l: 55, r: 25, t: 38, b: 45 },
 };
 

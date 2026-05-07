@@ -1,13 +1,16 @@
 .card {
-  border: 1px solid rgba(166, 197, 217, 0.17);
+  border: 1px solid var(--line);
   border-radius: 14px;
-  background: var(--panel-strong);
-  padding: 0.75rem;
+  background: var(--surface);
+  padding: 0.75rem 1rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
 .title {
   margin: 0 0 0.45rem;
   font-size: 1rem;
+  font-weight: 600;
+  color: var(--ink);
 }
 
 .meta {

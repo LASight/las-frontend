@@ -8,6 +8,7 @@ import { FileValidationModal } from "./components/FileValidationModal";
 import { MetricCard } from "./components/metric-card";
 import { PlotCard } from "./components/plot-card";
 import { SectionPanel } from "./components/section-panel";
+import { Sidebar } from "./components/sidebar";
 import { TabBar } from "./components/tab-bar";
 import { exportCsvReport, exportPdfReport } from "./controllers/export-controller";
 import {
@@ -160,10 +161,10 @@ function RawTrackPlots({ well }: { well: WellReport }) {
                 margin: { l: 62, r: 16, t: 30, b: 42 },
                 xaxis: {
                   title,
-                  gridcolor: "rgba(166,197,217,0.1)",
+                  gridcolor: "rgba(30,37,51,0.08)",
                   ...(range ? { range } : {}),
                 },
-                yaxis: { title: "Depth", autorange: "reversed", gridcolor: "rgba(166,197,217,0.1)" },
+                yaxis: { title: "Depth", autorange: "reversed", gridcolor: "rgba(30,37,51,0.08)" },
                 showlegend: false,
               }}
               style={{ width: "100%", height: "520px" }}
@@ -279,8 +280,8 @@ function DerivedPlots({ well }: { well: WellReport }) {
             layout={{
               ...PLOT_LAYOUT_BASE,
               margin: { l: 60, r: 28, t: 38, b: 35 },
-              xaxis: { title: "Value", range: [0, 1], gridcolor: "rgba(166,197,217,0.1)" },
-              yaxis: { title: "Depth", autorange: "reversed", gridcolor: "rgba(166,197,217,0.1)" },
+              xaxis: { title: "Value", range: [0, 1], gridcolor: "rgba(30,37,51,0.08)" },
+              yaxis: { title: "Depth", autorange: "reversed", gridcolor: "rgba(30,37,51,0.08)" },
               legend: { orientation: "h" },
             }}
             style={{ width: "100%", height: "420px" }}
@@ -301,7 +302,7 @@ function DerivedPlots({ well }: { well: WellReport }) {
               xaxis: {
                 title: "Normalized Velocity / Density / AI",
                 range: [0, 1],
-                gridcolor: "rgba(166,197,217,0.1)",
+                gridcolor: "rgba(30,37,51,0.08)",
               },
               xaxis2: {
                 title: "Reflectivity",
@@ -311,7 +312,7 @@ function DerivedPlots({ well }: { well: WellReport }) {
                 showgrid: false,
                 tickfont: { color: "#ffb8c0" },
               },
-              yaxis: { title: "Depth", autorange: "reversed", gridcolor: "rgba(166,197,217,0.1)" },
+              yaxis: { title: "Depth", autorange: "reversed", gridcolor: "rgba(30,37,51,0.08)" },
               legend: { orientation: "h" },
             }}
             style={{ width: "100%", height: "420px" }}
@@ -341,7 +342,7 @@ function DerivedPlots({ well }: { well: WellReport }) {
                 marker: {
                   size: (som.node_hits || []).flatMap((row) => row.map((hit) => Math.max(8, 8 + (hit || 0) * 0.7))),
                   color: "rgba(255,255,255,0.25)",
-                  line: { color: "#d9ecfa", width: 0.6 },
+                  line: { color: "rgba(30,37,51,0.25)", width: 0.6 },
                 },
                 text: (som.node_hits || []).flatMap((row, rowIdx) => row.map((hit, colIdx) => `Node (${rowIdx},${colIdx}) hits: ${hit || 0}`)),
                 hovertemplate: "%{text}<extra></extra>",
@@ -385,8 +386,8 @@ function DerivedPlots({ well }: { well: WellReport }) {
             layout={{
               ...PLOT_LAYOUT_BASE,
               margin: { l: 60, r: 54, t: 38, b: 35 },
-              xaxis: { title: "BMU Node Index", gridcolor: "rgba(166,197,217,0.1)" },
-              yaxis: { title: "Depth", autorange: "reversed", gridcolor: "rgba(166,197,217,0.1)" },
+              xaxis: { title: "BMU Node Index", gridcolor: "rgba(30,37,51,0.08)" },
+              yaxis: { title: "Depth", autorange: "reversed", gridcolor: "rgba(30,37,51,0.08)" },
             }}
             style={{ width: "100%", height: "420px" }}
             config={{ displaylogo: false, responsive: true }}
@@ -445,6 +446,7 @@ function SequenceCorrelationChart({ correlation }: { correlation: SequenceCorrel
 export default function App() {
   const [activeTab, setActiveTab] = useState<TabId>("overview");
   const [demoMode, setDemoMode] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [assistantOpen, setAssistantOpen] = useState(false);
   const [assistantWidth, setAssistantWidth] = useState(420);
   const [exportingPdf, setExportingPdf] = useState(false);
@@ -580,58 +582,29 @@ export default function App() {
         }}
       />
     )}
-    <main
-      className={`${styles.shell} ${demoMode ? styles.demoMode : ""} ${
-        assistantOpen ? styles.shellDocked : ""
-      }`}
-      style={{ "--assistant-width": `${assistantWidth}px` } as CSSProperties}
-    >
-      <SectionPanel>
-        <p className={styles.eyebrow}>LAS INTELLIGENCE PLATFORM</p>
-        <h1 className={styles.heroTitle}>Modern Multi-Well Interpretation Workbench</h1>
-        <p className={styles.muted}>
-          Vite + React + TypeScript frontend with ML analytics, sequence stratigraphy QA workflow, and AI-assisted
-          interpretation.
-        </p>
-      </SectionPanel>
-
-      <SectionPanel className={styles.controls}>
-        <div className={styles.row}>
-          <label className={styles.file}>
-            <span>Select LAS files</span>
-            <input type="file" accept=".las" multiple onChange={(event) => analysis.setFileList(event.target.files)} />
-          </label>
-          <label className={styles.toggle}>
-            <input type="checkbox" checked={analysis.aiEnabled} onChange={(event) => analysis.setAiEnabled(event.target.checked)} />
-            Enable AI interpretation
-          </label>
-          <label className={styles.toggle}>
-            <input type="checkbox" checked={demoMode} onChange={(event) => setDemoMode(event.target.checked)} />
-            Demo mode visuals
-          </label>
-        </div>
-
-        <div className={styles.row}>
-          <button className={`${styles.button} ${styles.strong}`} onClick={() => void analysis.runSampleAnalysis()} disabled={analysis.isBusy}>
-            Analyze Sample Folder
-          </button>
-          <button className={`${styles.button} ${styles.primary}`} onClick={() => void analysis.runUploadAnalysis()} disabled={analysis.isBusy}>
-            Analyze Uploaded Files
-          </button>
-          <button className={`${styles.button} ${styles.secondary}`} onClick={() => void runDemoMode()} disabled={analysis.isBusy}>
-            Run Demo Mode
-          </button>
-          <button className={`${styles.button} ${styles.secondary}`} onClick={onExportCsv} disabled={!payload}>
-            Export CSV
-          </button>
-          <button className={`${styles.button} ${styles.secondary}`} onClick={() => void onExportPdf()} disabled={!payload || exportingPdf}>
-            {exportingPdf ? "Exporting PDF..." : "Export PDF"}
-          </button>
-        </div>
-
-        <p className={styles.status}>{analysis.status}</p>
-      </SectionPanel>
-
+    <div className={styles.appLayout}>
+      <Sidebar
+        collapsed={sidebarCollapsed}
+        onCollapseToggle={() => setSidebarCollapsed((prev) => !prev)}
+        isBusy={analysis.isBusy}
+        status={analysis.status}
+        aiEnabled={analysis.aiEnabled}
+        demoMode={demoMode}
+        hasPayload={!!payload}
+        exportingPdf={exportingPdf}
+        onFileChange={(files) => analysis.setFileList(files)}
+        onAnalyzeSample={() => void analysis.runSampleAnalysis()}
+        onAnalyzeUploads={() => void analysis.runUploadAnalysis()}
+        onRunDemo={() => void runDemoMode()}
+        onExportCsv={onExportCsv}
+        onExportPdf={() => void onExportPdf()}
+        onAiEnabledChange={analysis.setAiEnabled}
+        onDemoModeChange={setDemoMode}
+      />
+      <main
+        className={`${styles.mainBody} ${demoMode ? styles.demoMode : ""}`}
+        style={{ "--assistant-width": `${assistantWidth}px` } as CSSProperties}
+      >
       <SectionPanel>
         <TabBar active={activeTab} onChange={setActiveTab} />
       </SectionPanel>
@@ -680,7 +653,7 @@ export default function App() {
                     layout={{
                       ...PLOT_LAYOUT_BASE,
                       margin: { l: 140, r: 24, t: 24, b: 35 },
-                      xaxis: { title: "Composite Score", gridcolor: "rgba(166,197,217,0.12)" },
+                      xaxis: { title: "Composite Score", gridcolor: "rgba(30,37,51,0.08)" },
                       yaxis: { autorange: "reversed" },
                     }}
                     style={{ width: "100%", height: "350px" }}
@@ -750,7 +723,7 @@ export default function App() {
                           color: payload.portfolio_analytics.pay_risk_matrix.map(
                             (row) => QUADRANT_COLORS[row.quadrant || ""] || "#2fa7c8"
                           ),
-                          line: { color: "#d9ecfa", width: 0.8 },
+                          line: { color: "rgba(30,37,51,0.2)", width: 0.8 },
                           opacity: 0.92,
                         },
                         customdata: payload.portfolio_analytics.pay_risk_matrix.map((row) => [
@@ -765,8 +738,8 @@ export default function App() {
                     layout={{
                       ...PLOT_LAYOUT_BASE,
                       margin: { l: 55, r: 24, t: 24, b: 42 },
-                      xaxis: { title: "Risk Index", range: [0, 100], gridcolor: "rgba(166,197,217,0.12)" },
-                      yaxis: { title: "Pay Index", range: [0, 100], gridcolor: "rgba(166,197,217,0.12)" },
+                      xaxis: { title: "Risk Index", range: [0, 100], gridcolor: "rgba(30,37,51,0.08)" },
+                      yaxis: { title: "Pay Index", range: [0, 100], gridcolor: "rgba(30,37,51,0.08)" },
                       shapes: [
                         {
                           type: "line",
@@ -774,7 +747,7 @@ export default function App() {
                           x1: 40,
                           y0: 0,
                           y1: 100,
-                          line: { color: "rgba(166,197,217,0.3)", dash: "dot" },
+                          line: { color: "rgba(30,37,51,0.2)", dash: "dot" },
                         },
                         {
                           type: "line",
@@ -782,7 +755,7 @@ export default function App() {
                           x1: 100,
                           y0: 60,
                           y1: 60,
-                          line: { color: "rgba(166,197,217,0.3)", dash: "dot" },
+                          line: { color: "rgba(30,37,51,0.2)", dash: "dot" },
                         },
                       ],
                     }}
@@ -811,7 +784,7 @@ export default function App() {
                           colorscale: "Turbo",
                           cmin: 0,
                           cmax: 100,
-                          line: { color: "#d9ecfa", width: 0.8 },
+                          line: { color: "rgba(30,37,51,0.2)", width: 0.8 },
                           opacity: 0.9,
                           colorbar: { title: "Risk" },
                         },
@@ -822,8 +795,8 @@ export default function App() {
                     layout={{
                       ...PLOT_LAYOUT_BASE,
                       margin: { l: 60, r: 24, t: 24, b: 45 },
-                      xaxis: { title: "Average Velocity (ft/s)", gridcolor: "rgba(166,197,217,0.12)" },
-                      yaxis: { title: "Reflectivity Energy", gridcolor: "rgba(166,197,217,0.12)" },
+                      xaxis: { title: "Average Velocity (ft/s)", gridcolor: "rgba(30,37,51,0.08)" },
+                      yaxis: { title: "Reflectivity Energy", gridcolor: "rgba(30,37,51,0.08)" },
                     }}
                     style={{ width: "100%", height: "360px" }}
                     config={{ displaylogo: false, responsive: true }}
@@ -861,7 +834,7 @@ export default function App() {
                       ...PLOT_LAYOUT_BASE,
                       margin: { l: 55, r: 55, t: 24, b: 64 },
                       xaxis: { tickangle: -25 },
-                      yaxis: { title: "Quantization Error", gridcolor: "rgba(166,197,217,0.12)" },
+                      yaxis: { title: "Quantization Error", gridcolor: "rgba(30,37,51,0.08)" },
                       yaxis2: { title: "Topological Error", overlaying: "y", side: "right", showgrid: false },
                       legend: { orientation: "h" },
                     }}
@@ -1006,7 +979,7 @@ export default function App() {
                             ? "rgba(84,209,160,0.95)"
                             : boundary.status === "rejected"
                               ? "rgba(255,110,116,0.95)"
-                              : "rgba(217,236,250,0.38)",
+                              : "rgba(30,37,51,0.3)",
                         dash: boundary.status === "accepted" ? "solid" : boundary.status === "rejected" ? "dash" : "dot",
                         width: 1.5,
                       },
@@ -1076,6 +1049,7 @@ export default function App() {
         </>
       ) : null}
 
+      </main>
       <AssistantDrawer
         open={assistantOpen}
         onToggle={() => setAssistantOpen((prev) => !prev)}
@@ -1097,7 +1071,7 @@ export default function App() {
         onClear={chat.clear}
         onWidthChange={setAssistantWidth}
       />
-    </main>
+    </div>
     </>
   );
 }
