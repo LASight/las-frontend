@@ -44,12 +44,12 @@
   width: 28px;
   height: 28px;
   border-radius: 6px;
-  background: linear-gradient(135deg, var(--accent-teal), var(--accent-green));
+  background: #3d9ec8;
   display: grid;
   place-items: center;
   font-size: 0.85rem;
   font-weight: 700;
-  color: #0b1217;
+  color: #ffffff;
   flex-shrink: 0;
 }
 
@@ -177,11 +177,11 @@
 
 /* Accent variants */
 .sbBtnPrimary {
-  color: var(--accent-teal);
+  color: #5cc4e8;
 }
 
 .sbBtnStrong {
-  color: var(--accent-orange);
+  color: #5cc4e8;
 }
 
 /* ── Toggle rows ────────────────────────────────────────────── */
@@ -235,12 +235,12 @@
 }
 
 .toggleOn {
-  background: rgba(56, 185, 217, 0.35);
+  background: rgba(61, 158, 200, 0.4);
 }
 
 .toggleOn::after {
   transform: translateX(12px);
-  background: var(--accent-teal);
+  background: #3d9ec8;
 }
 
 /* ── File input row ─────────────────────────────────────────── */

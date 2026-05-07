@@ -34,14 +34,14 @@
   --sidebar-t:         220ms ease;
 }
 
-/* Sidebar dark palette — scoped to .sidebar element */
-.sidebar {
-  --sb-bg-deep: #141820;
-  --sb-bg:      #1c2333;
-  --sb-hover:   #232d42;
-  --sb-active:  #2a3550;
-  --sb-ink:     #d4dce8;
-  --sb-muted:   #7a8ba0;
-  --sb-line:    rgba(255, 255, 255, 0.08);
-  --sb-line-s:  rgba(255, 255, 255, 0.14);
+/* Sidebar dark palette — defined on :root so CSS Modules hashed classes can access them */
+:root {
+  --sb-bg-deep: #080f16;
+  --sb-bg:      #0d1a24;
+  --sb-hover:   #132130;
+  --sb-active:  #1a2d40;
+  --sb-ink:     #d9ecfa;
+  --sb-muted:   #8ab4cc;
+  --sb-line:    rgba(166, 197, 217, 0.18);
+  --sb-line-s:  rgba(166, 197, 217, 0.28);
 }
