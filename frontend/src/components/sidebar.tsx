@@ -112,7 +112,7 @@ export function Sidebar({
       <div className={styles.sbTop}>
         <div className={styles.logoArea}>
           <div className={styles.logoMark}>L</div>
-          <span className={styles.appName}>LAS Intelligence</span>
+          <span className={styles.appName}>LASight</span>
         </div>
         <button
           className={styles.collapseBtn}
