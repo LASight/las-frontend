@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Plot from "react-plotly.js";
 
 import styles from "./app.module.css";
@@ -445,7 +445,6 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<TabId>("overview");
   const [demoMode, setDemoMode] = useState(false);
   const [assistantOpen, setAssistantOpen] = useState(false);
-  const [assistantWidth, setAssistantWidth] = useState(420);
   const [exportingPdf, setExportingPdf] = useState(false);
   const [sequenceAiLoading, setSequenceAiLoading] = useState(false);
   const [sequenceAiText, setSequenceAiText] = useState("Run analysis and click AI Autocomplete Suggestions.");
@@ -479,6 +478,13 @@ export default function App() {
     window.addEventListener("keydown", onEsc);
     return () => window.removeEventListener("keydown", onEsc);
   }, [assistantOpen]);
+
+  useEffect(() => {
+    if (!document?.documentElement) return;
+    if (!document.documentElement.style.getPropertyValue("--assistant-width")) {
+      document.documentElement.style.setProperty("--assistant-width", "420px");
+    }
+  }, []);
 
   const selectedBoundaries = (sequence.boundaries || []) as SequenceBoundaryRow[];
 
@@ -534,10 +540,6 @@ export default function App() {
     }
   }
 
-  async function onSendPrompt(prompt: string) {
-    await chat.sendMessageWithText(prompt);
-  }
-
   function onExportCsv() {
     if (!analysis.payload) {
       analysis.setStatus("No analysis results available for export.");
@@ -572,7 +574,6 @@ export default function App() {
       className={`${styles.shell} ${demoMode ? styles.demoMode : ""} ${
         assistantOpen ? styles.shellDocked : ""
       }`}
-      style={{ "--assistant-width": `${assistantWidth}px` } as CSSProperties}
     >
       <SectionPanel>
         <p className={styles.eyebrow}>LAS INTELLIGENCE PLATFORM</p>
@@ -1073,17 +1074,14 @@ export default function App() {
         aiInterpretation={analysis.aiText || analysis.payload?.ai_interpretation || "No AI interpretation."}
         aiLoading={analysis.aiLoading}
         messages={chat.messages}
-        input={chat.input}
-        setInput={chat.setInput}
         isPending={chat.isPending}
-        onSend={() => {
-          void chat.sendMessage();
-        }}
-        onSendPrompt={(prompt) => {
-          void onSendPrompt(prompt);
+        onSendText={async (text) => {
+          await chat.sendMessageWithText(text);
         }}
         onClear={chat.clear}
-        onWidthChange={setAssistantWidth}
+        onWidthChange={(value) => {
+          document.documentElement.style.setProperty("--assistant-width", `${value}px`);
+        }}
       />
     </main>
   );
