@@ -8,6 +8,7 @@ import { FileValidationModal } from "./components/FileValidationModal";
 import { MetricCard } from "./components/metric-card";
 import { PlotCard } from "./components/plot-card";
 import { SectionPanel } from "./components/section-panel";
+import { Sidebar } from "./components/sidebar";
 import { TabBar } from "./components/tab-bar";
 import { exportCsvReport, exportPdfReport } from "./controllers/export-controller";
 import {
@@ -41,20 +42,23 @@ type SequenceBoundaryRow = {
 
 const RAW_CURVE_ORDER = ["GR", "DT", "RESD", "SP", "RHOB", "NPHI"];
 
+// Colors follow loose industry conventions: GR=dark-green, NPHI=blue, RHOB=warm-orange,
+// RESD=sienna, DT=purple, SP=olive. All chosen for light-background legibility.
 const RAW_CURVE_COLOR: Record<string, string> = {
-  GR: "#58d1b2",
-  DT: "#4ab0ff",
-  RESD: "#f2bf58",
-  SP: "#f08a84",
-  RHOB: "#bca2ff",
-  NPHI: "#9ed36a",
+  GR:   "#2d6a4f", // deep forest green  — GR is conventionally dark; green is standard in many platforms
+  DT:   "#6b3fa0", // medium purple       — sonic, distinct from NPHI blue and resistivity
+  RESD: "#9e3a1a", // brick sienna        — resistivity brown-red per Techlog/IP convention
+  SP:   "#5c6e22", // olive               — SP is GR-track companion; earthy tone
+  RHOB: "#b8510c", // burnt orange        — density warm-orange per universal Archie convention
+  NPHI: "#1a5ea8", // steel blue          — neutron porosity blue is a universal well-log standard
 };
 
+// Traffic-light convention: green=best, amber=caution, gray=low, red=risk
 const QUADRANT_COLORS: Record<string, string> = {
-  "Prime Target": "#54d1a0",
-  "Balanced Opportunity": "#2fa7c8",
-  "Low Upside / Low Risk": "#9bb3c4",
-  "High-Risk / Needs Review": "#ff6e74",
+  "Prime Target":              "#1a9850", // forest green
+  "Balanced Opportunity":      "#f39c12", // amber
+  "Low Upside / Low Risk":     "#7f8c8d", // slate gray
+  "High-Risk / Needs Review":  "#c0392b", // muted red
 };
 
 function MarkdownView({ text }: { text: string }) {
@@ -131,7 +135,7 @@ function RawTrackPlots({ well }: { well: WellReport }) {
             y: depth,
             type: "scatter",
             mode: "lines",
-            line: { width: 1.6, color: RAW_CURVE_COLOR[key] || "#8bc1da" },
+            line: { width: 1.8, color: RAW_CURVE_COLOR[key] || "#5c6e82" },
             hovertemplate: `Depth %{y}<br>${title}: %{x:.3f}<extra></extra>`,
             showlegend: false,
             name: key,
@@ -144,7 +148,7 @@ function RawTrackPlots({ well }: { well: WellReport }) {
             y: anomalyDepth,
             type: "scatter",
             mode: "markers",
-            marker: { size: 5, color: "#ff6e74", symbol: "diamond" },
+            marker: { size: 7, color: "#c0392b", symbol: "diamond" },
             hovertemplate: `Depth %{y}<br>${title}: %{x:.3f}<br>ML anomaly<extra></extra>`,
             showlegend: false,
             name: "Anomaly",
@@ -160,10 +164,10 @@ function RawTrackPlots({ well }: { well: WellReport }) {
                 margin: { l: 62, r: 16, t: 30, b: 42 },
                 xaxis: {
                   title,
-                  gridcolor: "rgba(166,197,217,0.1)",
+                  gridcolor: "rgba(30,37,51,0.11)",
                   ...(range ? { range } : {}),
                 },
-                yaxis: { title: "Depth", autorange: "reversed", gridcolor: "rgba(166,197,217,0.1)" },
+                yaxis: { title: "Depth", autorange: "reversed", gridcolor: "rgba(30,37,51,0.11)" },
                 showlegend: false,
               }}
               style={{ width: "100%", height: "520px" }}
@@ -195,9 +199,9 @@ function DerivedPlots({ well }: { well: WellReport }) {
       type: "scatter",
       mode: "lines",
       name: "Vsh",
-      line: { color: "#f0c061", width: 2 },
+      line: { color: "#8b6914", width: 2 },        // dark amber-brown = shale/clay earthy tone
       fill: "tozerox",
-      fillcolor: "rgba(240,192,97,0.16)",
+      fillcolor: "rgba(139,105,20,0.22)",
     });
   }
   if (hasNumericData((derived.phi || []) as Array<number | null | undefined>)) {
@@ -207,9 +211,9 @@ function DerivedPlots({ well }: { well: WellReport }) {
       type: "scatter",
       mode: "lines",
       name: "Phi",
-      line: { color: "#54d1a0", width: 2 },
+      line: { color: "#1e7a4a", width: 2 },        // deep green = reservoir quality
       fill: "tozerox",
-      fillcolor: "rgba(84,209,160,0.14)",
+      fillcolor: "rgba(30,122,74,0.20)",
     });
   }
   if (hasNumericData((derived.sw || []) as Array<number | null | undefined>)) {
@@ -219,9 +223,9 @@ function DerivedPlots({ well }: { well: WellReport }) {
       type: "scatter",
       mode: "lines",
       name: "Sw",
-      line: { color: "#2fa7c8", width: 2 },
+      line: { color: "#1557a0", width: 2 },        // deep blue = water saturation (universal convention)
       fill: "tozerox",
-      fillcolor: "rgba(47,167,200,0.14)",
+      fillcolor: "rgba(21,87,160,0.18)",
     });
   }
 
@@ -233,7 +237,7 @@ function DerivedPlots({ well }: { well: WellReport }) {
       type: "scatter",
       mode: "lines",
       name: "Velocity (norm)",
-      line: { color: "#7dc3ff", width: 1.9 },
+      line: { color: "#1a5ea8", width: 1.9 },      // steel blue — acoustic/velocity convention
     });
   }
   if (hasNumericData(density as Array<number | null | undefined>)) {
@@ -243,7 +247,7 @@ function DerivedPlots({ well }: { well: WellReport }) {
       type: "scatter",
       mode: "lines",
       name: "Density (norm)",
-      line: { color: "#c39eff", width: 1.8 },
+      line: { color: "#b8510c", width: 1.8 },      // burnt orange — aligns with RHOB convention
     });
   }
   if (hasNumericData(aiProxy as Array<number | null | undefined>)) {
@@ -253,7 +257,7 @@ function DerivedPlots({ well }: { well: WellReport }) {
       type: "scatter",
       mode: "lines",
       name: "AI proxy (norm)",
-      line: { color: "#f2bf58", width: 1.8 },
+      line: { color: "#6b3fa0", width: 1.8 },      // purple — computed/ML-derived; breaks gold collision
     });
   }
   if (hasNumericData(reflectivity as Array<number | null | undefined>)) {
@@ -264,7 +268,7 @@ function DerivedPlots({ well }: { well: WellReport }) {
       mode: "lines",
       name: "Reflectivity",
       xaxis: "x2",
-      line: { color: "#ff7f90", width: 1.5 },
+      line: { color: "#b03060", width: 1.5 },      // dark rose — distinct; deeper for light-bg visibility
     });
   }
 
@@ -279,8 +283,8 @@ function DerivedPlots({ well }: { well: WellReport }) {
             layout={{
               ...PLOT_LAYOUT_BASE,
               margin: { l: 60, r: 28, t: 38, b: 35 },
-              xaxis: { title: "Value", range: [0, 1], gridcolor: "rgba(166,197,217,0.1)" },
-              yaxis: { title: "Depth", autorange: "reversed", gridcolor: "rgba(166,197,217,0.1)" },
+              xaxis: { title: "Value", range: [0, 1], gridcolor: "rgba(30,37,51,0.11)" },
+              yaxis: { title: "Depth", autorange: "reversed", gridcolor: "rgba(30,37,51,0.11)" },
               legend: { orientation: "h" },
             }}
             style={{ width: "100%", height: "420px" }}
@@ -301,7 +305,7 @@ function DerivedPlots({ well }: { well: WellReport }) {
               xaxis: {
                 title: "Normalized Velocity / Density / AI",
                 range: [0, 1],
-                gridcolor: "rgba(166,197,217,0.1)",
+                gridcolor: "rgba(30,37,51,0.11)",
               },
               xaxis2: {
                 title: "Reflectivity",
@@ -309,9 +313,9 @@ function DerivedPlots({ well }: { well: WellReport }) {
                 side: "top",
                 range: [-0.25, 0.25],
                 showgrid: false,
-                tickfont: { color: "#ffb8c0" },
+                tickfont: { color: "#b03060" },
               },
-              yaxis: { title: "Depth", autorange: "reversed", gridcolor: "rgba(166,197,217,0.1)" },
+              yaxis: { title: "Depth", autorange: "reversed", gridcolor: "rgba(30,37,51,0.11)" },
               legend: { orientation: "h" },
             }}
             style={{ width: "100%", height: "420px" }}
@@ -341,7 +345,7 @@ function DerivedPlots({ well }: { well: WellReport }) {
                 marker: {
                   size: (som.node_hits || []).flatMap((row) => row.map((hit) => Math.max(8, 8 + (hit || 0) * 0.7))),
                   color: "rgba(255,255,255,0.25)",
-                  line: { color: "#d9ecfa", width: 0.6 },
+                  line: { color: "rgba(30,37,51,0.25)", width: 0.6 },
                 },
                 text: (som.node_hits || []).flatMap((row, rowIdx) => row.map((hit, colIdx) => `Node (${rowIdx},${colIdx}) hits: ${hit || 0}`)),
                 hovertemplate: "%{text}<extra></extra>",
@@ -374,7 +378,7 @@ function DerivedPlots({ well }: { well: WellReport }) {
                 marker: {
                   size: 6,
                   color: somBmu,
-                  colorscale: "Turbo",
+                  colorscale: "Viridis",
                   showscale: true,
                   colorbar: { title: "BMU" },
                 },
@@ -385,8 +389,8 @@ function DerivedPlots({ well }: { well: WellReport }) {
             layout={{
               ...PLOT_LAYOUT_BASE,
               margin: { l: 60, r: 54, t: 38, b: 35 },
-              xaxis: { title: "BMU Node Index", gridcolor: "rgba(166,197,217,0.1)" },
-              yaxis: { title: "Depth", autorange: "reversed", gridcolor: "rgba(166,197,217,0.1)" },
+              xaxis: { title: "BMU Node Index", gridcolor: "rgba(30,37,51,0.11)" },
+              yaxis: { title: "Depth", autorange: "reversed", gridcolor: "rgba(30,37,51,0.11)" },
             }}
             style={{ width: "100%", height: "420px" }}
             config={{ displaylogo: false, responsive: true }}
@@ -424,7 +428,7 @@ function SequenceCorrelationChart({ correlation }: { correlation: SequenceCorrel
           y: correlation.surface_names,
           zmin: 0,
           zmax: 1,
-          colorscale: "YlGnBu",
+          colorscale: "Blues",
           customdata: correlation.depth_matrix,
           hovertemplate:
             "Surface %{y}<br>Well %{x}<br>Relative position %{z:.3f}<br>Depth %{customdata:.2f}<extra></extra>",
@@ -445,6 +449,7 @@ function SequenceCorrelationChart({ correlation }: { correlation: SequenceCorrel
 export default function App() {
   const [activeTab, setActiveTab] = useState<TabId>("overview");
   const [demoMode, setDemoMode] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [assistantOpen, setAssistantOpen] = useState(false);
   const [exportingPdf, setExportingPdf] = useState(false);
   const [sequenceAiLoading, setSequenceAiLoading] = useState(false);
@@ -582,57 +587,28 @@ export default function App() {
         }}
       />
     )}
-    <main
-      className={`${styles.shell} ${demoMode ? styles.demoMode : ""} ${
-        assistantOpen ? styles.shellDocked : ""
-      }`}
-    >
-      <SectionPanel>
-        <p className={styles.eyebrow}>LAS INTELLIGENCE PLATFORM</p>
-        <h1 className={styles.heroTitle}>Modern Multi-Well Interpretation Workbench</h1>
-        <p className={styles.muted}>
-          Vite + React + TypeScript frontend with ML analytics, sequence stratigraphy QA workflow, and AI-assisted
-          interpretation.
-        </p>
-      </SectionPanel>
-
-      <SectionPanel className={styles.controls}>
-        <div className={styles.row}>
-          <label className={styles.file}>
-            <span>Select LAS files</span>
-            <input type="file" accept=".las" multiple onChange={(event) => analysis.setFileList(event.target.files)} />
-          </label>
-          <label className={styles.toggle}>
-            <input type="checkbox" checked={analysis.aiEnabled} onChange={(event) => analysis.setAiEnabled(event.target.checked)} />
-            Enable AI interpretation
-          </label>
-          <label className={styles.toggle}>
-            <input type="checkbox" checked={demoMode} onChange={(event) => setDemoMode(event.target.checked)} />
-            Demo mode visuals
-          </label>
-        </div>
-
-        <div className={styles.row}>
-          <button className={`${styles.button} ${styles.strong}`} onClick={() => void analysis.runSampleAnalysis()} disabled={analysis.isBusy}>
-            Analyze Sample Folder
-          </button>
-          <button className={`${styles.button} ${styles.primary}`} onClick={() => void analysis.runUploadAnalysis()} disabled={analysis.isBusy}>
-            Analyze Uploaded Files
-          </button>
-          <button className={`${styles.button} ${styles.secondary}`} onClick={() => void runDemoMode()} disabled={analysis.isBusy}>
-            Run Demo Mode
-          </button>
-          <button className={`${styles.button} ${styles.secondary}`} onClick={onExportCsv} disabled={!payload}>
-            Export CSV
-          </button>
-          <button className={`${styles.button} ${styles.secondary}`} onClick={() => void onExportPdf()} disabled={!payload || exportingPdf}>
-            {exportingPdf ? "Exporting PDF..." : "Export PDF"}
-          </button>
-        </div>
-
-        <p className={styles.status}>{analysis.status}</p>
-      </SectionPanel>
-
+    <div className={styles.appLayout}>
+      <Sidebar
+        collapsed={sidebarCollapsed}
+        onCollapseToggle={() => setSidebarCollapsed((prev) => !prev)}
+        isBusy={analysis.isBusy}
+        status={analysis.status}
+        aiEnabled={analysis.aiEnabled}
+        demoMode={demoMode}
+        hasPayload={!!payload}
+        exportingPdf={exportingPdf}
+        onFileChange={(files) => analysis.setFileList(files)}
+        onAnalyzeSample={() => void analysis.runSampleAnalysis()}
+        onAnalyzeUploads={() => void analysis.runUploadAnalysis()}
+        onRunDemo={() => void runDemoMode()}
+        onExportCsv={onExportCsv}
+        onExportPdf={() => void onExportPdf()}
+        onAiEnabledChange={analysis.setAiEnabled}
+        onDemoModeChange={setDemoMode}
+      />
+      <main
+        className={`${styles.mainBody} ${demoMode ? styles.demoMode : ""}`}
+        >
       <SectionPanel>
         <TabBar active={activeTab} onChange={setActiveTab} />
       </SectionPanel>
@@ -667,10 +643,11 @@ export default function App() {
                         x: payload.portfolio_analytics.well_ranking.map((row) => row.composite_score),
                         marker: {
                           color: payload.portfolio_analytics.well_ranking.map((row) => row.composite_score),
+                          // Traffic-light: low=red, mid=amber, high=green — universal quality convention
                           colorscale: [
-                            [0.0, "#2fa7c8"],
-                            [0.5, "#54d1a0"],
-                            [1.0, "#f0c061"],
+                            [0.0, "#d73027"],
+                            [0.5, "#fee08b"],
+                            [1.0, "#1a9850"],
                           ],
                         },
                         text: payload.portfolio_analytics.well_ranking.map((row) => fmt(row.composite_score, 2)),
@@ -681,7 +658,7 @@ export default function App() {
                     layout={{
                       ...PLOT_LAYOUT_BASE,
                       margin: { l: 140, r: 24, t: 24, b: 35 },
-                      xaxis: { title: "Composite Score", gridcolor: "rgba(166,197,217,0.12)" },
+                      xaxis: { title: "Composite Score", gridcolor: "rgba(30,37,51,0.11)" },
                       yaxis: { autorange: "reversed" },
                     }}
                     style={{ width: "100%", height: "350px" }}
@@ -712,10 +689,11 @@ export default function App() {
                         zmid: 0,
                         zmin: -1,
                         zmax: 1,
+                        // Diverging RdBu: light midpoint = zero correlation; works on white bg
                         colorscale: [
-                          [0.0, "#6b1d24"],
-                          [0.5, "#1f3344"],
-                          [1.0, "#5ae0b2"],
+                          [0.0, "#b2182b"],
+                          [0.5, "#f7f7f7"],
+                          [1.0, "#2166ac"],
                         ],
                         hovertemplate: "<b>%{x}</b> vs <b>%{y}</b><br>Similarity: %{z:.3f}<extra></extra>",
                       },
@@ -751,7 +729,7 @@ export default function App() {
                           color: payload.portfolio_analytics.pay_risk_matrix.map(
                             (row) => QUADRANT_COLORS[row.quadrant || ""] || "#2fa7c8"
                           ),
-                          line: { color: "#d9ecfa", width: 0.8 },
+                          line: { color: "rgba(30,37,51,0.2)", width: 0.8 },
                           opacity: 0.92,
                         },
                         customdata: payload.portfolio_analytics.pay_risk_matrix.map((row) => [
@@ -766,8 +744,8 @@ export default function App() {
                     layout={{
                       ...PLOT_LAYOUT_BASE,
                       margin: { l: 55, r: 24, t: 24, b: 42 },
-                      xaxis: { title: "Risk Index", range: [0, 100], gridcolor: "rgba(166,197,217,0.12)" },
-                      yaxis: { title: "Pay Index", range: [0, 100], gridcolor: "rgba(166,197,217,0.12)" },
+                      xaxis: { title: "Risk Index", range: [0, 100], gridcolor: "rgba(30,37,51,0.11)" },
+                      yaxis: { title: "Pay Index", range: [0, 100], gridcolor: "rgba(30,37,51,0.11)" },
                       shapes: [
                         {
                           type: "line",
@@ -775,7 +753,7 @@ export default function App() {
                           x1: 40,
                           y0: 0,
                           y1: 100,
-                          line: { color: "rgba(166,197,217,0.3)", dash: "dot" },
+                          line: { color: "rgba(30,37,51,0.2)", dash: "dot" },
                         },
                         {
                           type: "line",
@@ -783,7 +761,7 @@ export default function App() {
                           x1: 100,
                           y0: 60,
                           y1: 60,
-                          line: { color: "rgba(166,197,217,0.3)", dash: "dot" },
+                          line: { color: "rgba(30,37,51,0.2)", dash: "dot" },
                         },
                       ],
                     }}
@@ -812,7 +790,7 @@ export default function App() {
                           colorscale: "Turbo",
                           cmin: 0,
                           cmax: 100,
-                          line: { color: "#d9ecfa", width: 0.8 },
+                          line: { color: "rgba(30,37,51,0.2)", width: 0.8 },
                           opacity: 0.9,
                           colorbar: { title: "Risk" },
                         },
@@ -823,8 +801,8 @@ export default function App() {
                     layout={{
                       ...PLOT_LAYOUT_BASE,
                       margin: { l: 60, r: 24, t: 24, b: 45 },
-                      xaxis: { title: "Average Velocity (ft/s)", gridcolor: "rgba(166,197,217,0.12)" },
-                      yaxis: { title: "Reflectivity Energy", gridcolor: "rgba(166,197,217,0.12)" },
+                      xaxis: { title: "Average Velocity (ft/s)", gridcolor: "rgba(30,37,51,0.11)" },
+                      yaxis: { title: "Reflectivity Energy", gridcolor: "rgba(30,37,51,0.11)" },
                     }}
                     style={{ width: "100%", height: "360px" }}
                     config={{ displaylogo: false, responsive: true }}
@@ -862,7 +840,7 @@ export default function App() {
                       ...PLOT_LAYOUT_BASE,
                       margin: { l: 55, r: 55, t: 24, b: 64 },
                       xaxis: { tickangle: -25 },
-                      yaxis: { title: "Quantization Error", gridcolor: "rgba(166,197,217,0.12)" },
+                      yaxis: { title: "Quantization Error", gridcolor: "rgba(30,37,51,0.11)" },
                       yaxis2: { title: "Topological Error", overlaying: "y", side: "right", showgrid: false },
                       legend: { orientation: "h" },
                     }}
@@ -961,7 +939,7 @@ export default function App() {
                     mode: "lines",
                     x: selectedSequenceReport.sequence_stratigraphy.tracks.signal || [],
                     y: selectedSequenceReport.sequence_stratigraphy.tracks.depth || [],
-                    line: { color: "#f2bf58", width: 1.2 },
+                    line: { color: "#8b6914", width: 1.4 }, // dark amber — raw/noisy, subordinate
                     name: "Signal",
                   },
                   {
@@ -969,7 +947,7 @@ export default function App() {
                     mode: "lines",
                     x: selectedSequenceReport.sequence_stratigraphy.tracks.signal_smooth || [],
                     y: selectedSequenceReport.sequence_stratigraphy.tracks.depth || [],
-                    line: { color: "#7dc3ff", width: 2.0 },
+                    line: { color: "#1a5ea8", width: 2.2 }, // steel blue — interpreter's working curve
                     name: "Smoothed",
                   },
                 ] as never}
@@ -1004,12 +982,12 @@ export default function App() {
                       line: {
                         color:
                           boundary.status === "accepted"
-                            ? "rgba(84,209,160,0.95)"
+                            ? "rgba(22,132,70,1.0)"    // solid green — confirmed pick
                             : boundary.status === "rejected"
-                              ? "rgba(255,110,116,0.95)"
-                              : "rgba(217,236,250,0.38)",
+                              ? "rgba(186,48,48,1.0)"  // solid muted red — discarded pick
+                              : "rgba(170,120,30,1.0)",// amber/ochre — unreviewed; clearly visible
                         dash: boundary.status === "accepted" ? "solid" : boundary.status === "rejected" ? "dash" : "dot",
-                        width: 1.5,
+                        width: boundary.status === "accepted" ? 2.0 : boundary.status === "rejected" ? 1.8 : 1.5,
                       },
                     })) as Array<Record<string, unknown>>),
                   ],
@@ -1077,6 +1055,7 @@ export default function App() {
         </>
       ) : null}
 
+      </main>
       <AssistantDrawer
         open={assistantOpen}
         onToggle={() => setAssistantOpen((prev) => !prev)}
@@ -1095,7 +1074,7 @@ export default function App() {
           document.documentElement.style.setProperty("--assistant-width", `${value}px`);
         }}
       />
-    </main>
+    </div>
     </>
   );
 }

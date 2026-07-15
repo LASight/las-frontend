@@ -1,11 +1,48 @@
 :root {
+  /* ── Body / light theme ─────────────────────────────────── */
+  --body-bg:     #f4f5f7;
+  --surface:     #ffffff;
+  --ink:         #1e2533;
+  --muted:       #6b7a8d;
+  --line:        #e1e4e8;
+  --line-strong: #c9cdd4;
+
+  /* ── Accents ─────────────────────────────────────────────── */
+  --accent-teal:     #38b9d9;
+  --accent-teal-2:   #68e4de;
+  --accent-orange:   #f39a4b;
+  --accent-orange-2: #f0c061;
+  --accent-green:    #54d1a0;
+  --accent-green-2:  #74dfb7;
+  --danger:          #ff6e74;
+  --ok:              #59d39e;
+  --warn:            #f0c061;
+
+  /* ── Legacy aliases kept for FileValidationModal + AssistantDrawer ── */
   --bg-0: #0b1217;
   --bg-1: #101a22;
   --bg-2: #162531;
   --panel: rgba(13, 24, 34, 0.84);
   --panel-strong: rgba(10, 18, 26, 0.92);
-  --line: rgba(166, 197, 217, 0.18);
-  --ink: #eaf4fb;
-  --muted: #9bb3c4;
+  --accent-a: #2fa7c8;
+  --accent-b: #f39a4b;
+  --accent-c: #54d1a0;
+
+  /* ── Sidebar dimensions ──────────────────────────────────── */
+  --sidebar-width:     260px;
+  --sidebar-collapsed: 52px;
+  --sidebar-t:         220ms ease;
+}
+
+/* Sidebar dark palette — defined on :root so CSS Modules hashed classes can access them */
+:root {
+  --sb-bg-deep: #080f16;
+  --sb-bg:      #0d1a24;
+  --sb-hover:   #132130;
+  --sb-active:  #1a2d40;
+  --sb-ink:     #d9ecfa;
+  --sb-muted:   #8ab4cc;
+  --sb-line:    rgba(166, 197, 217, 0.18);
+  --sb-line-s:  rgba(166, 197, 217, 0.28);
   --assistant-width: 420px;
 }

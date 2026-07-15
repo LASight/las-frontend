@@ -2,16 +2,17 @@ import type { Layout } from "plotly.js";
 
 export const PLOT_LAYOUT_BASE: Partial<Layout> = {
   paper_bgcolor: "rgba(0,0,0,0)",
-  plot_bgcolor: "rgba(10,18,26,0.65)",
-  font: { color: "#d9ecfa", family: "Space Grotesk, sans-serif" },
+  plot_bgcolor: "#f8f9fa",
+  font: { color: "#1e2533", family: "Space Grotesk, sans-serif" },
   margin: { l: 55, r: 25, t: 38, b: 45 },
 };
 
 export const SEQ_TRACT_COLOR: Record<string, string> = {
-  "Progradation - Regression": "rgba(211,74,74,0.20)",
-  "Retrogradation - Transgression": "rgba(71,121,216,0.20)",
-  "Steady Aggradation": "rgba(108,186,101,0.20)",
-  UNDEF: "rgba(136,136,136,0.15)",
+  // Opacity raised to 0.34 — fills at 0.20 on a light background are near-invisible
+  "Progradation - Regression":     "rgba(185, 78,  62, 0.34)", // muted warm red  — regressive / falling
+  "Retrogradation - Transgression":"rgba( 52,107, 186, 0.34)", // steel blue      — transgressive / rising
+  "Steady Aggradation":            "rgba( 72,155,  86, 0.34)", // forest green     — aggradation / equilibrium
+  UNDEF:                           "rgba(130,130, 130, 0.12)", // neutral gray     — unclassified, deliberately subtle
 };
 
 export function hasNumericData(values: Array<number | null | undefined>): boolean {

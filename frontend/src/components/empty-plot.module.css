@@ -4,7 +4,8 @@
   place-items: center;
   color: var(--muted);
   font-family: "IBM Plex Mono", monospace;
-  border: 1px solid rgba(166, 197, 217, 0.15);
+  font-size: 0.83rem;
+  border: 1px dashed var(--line-strong);
   border-radius: 12px;
-  background: rgba(10, 19, 29, 0.72);
+  background: #fafbfc;
 }
