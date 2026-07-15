@@ -7,6 +7,33 @@ export const PLOT_LAYOUT_BASE: Partial<Layout> = {
   margin: { l: 55, r: 25, t: 38, b: 45 },
 };
 
+/** Shared Plotly config — no logo, responsive resize. */
+export const PLOT_CONFIG = { displaylogo: false, responsive: true } as const;
+
+/** Grid line color used across every axis for light-background legibility. */
+export const GRID_COLOR = "rgba(30,37,51,0.11)";
+
+export const RAW_CURVE_ORDER = ["GR", "DT", "RESD", "SP", "RHOB", "NPHI"];
+
+// Colors follow loose industry conventions: GR=dark-green, NPHI=blue, RHOB=warm-orange,
+// RESD=sienna, DT=purple, SP=olive. All chosen for light-background legibility.
+export const RAW_CURVE_COLOR: Record<string, string> = {
+  GR:   "#2d6a4f", // deep forest green  — GR is conventionally dark; green is standard in many platforms
+  DT:   "#6b3fa0", // medium purple       — sonic, distinct from NPHI blue and resistivity
+  RESD: "#9e3a1a", // brick sienna        — resistivity brown-red per Techlog/IP convention
+  SP:   "#5c6e22", // olive               — SP is GR-track companion; earthy tone
+  RHOB: "#b8510c", // burnt orange        — density warm-orange per universal Archie convention
+  NPHI: "#1a5ea8", // steel blue          — neutron porosity blue is a universal well-log standard
+};
+
+// Traffic-light convention: green=best, amber=caution, gray=low, red=risk
+export const QUADRANT_COLORS: Record<string, string> = {
+  "Prime Target":              "#1a9850", // forest green
+  "Balanced Opportunity":      "#f39c12", // amber
+  "Low Upside / Low Risk":     "#7f8c8d", // slate gray
+  "High-Risk / Needs Review":  "#c0392b", // muted red
+};
+
 export const SEQ_TRACT_COLOR: Record<string, string> = {
   // Opacity raised to 0.34 — fills at 0.20 on a light background are near-invisible
   "Progradation - Regression":     "rgba(185, 78,  62, 0.34)", // muted warm red  — regressive / falling

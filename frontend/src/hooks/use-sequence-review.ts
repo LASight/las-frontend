@@ -2,12 +2,13 @@ import { useMemo, useState } from "react";
 
 import type {
   AnalyzePayload,
+  BoundaryStatus,
   SequenceBoundary,
   SequenceCorrelation,
   WellReport,
 } from "../models/analyze-models";
 
-export type BoundaryStatus = "pending" | "accepted" | "rejected";
+export type { BoundaryStatus };
 
 type SequenceEditState = {
   statusByBoundaryId: Record<string, BoundaryStatus>;
