@@ -15,11 +15,8 @@ type Props = {
   aiInterpretation: string;
   aiLoading: boolean;
   messages: ChatMessage[];
-  input: string;
-  setInput: (value: string) => void;
   isPending: boolean;
-  onSend: () => void;
-  onSendPrompt: (prompt: string) => void;
+  onSendText: (text: string) => Promise<void> | void;
   onClear: () => void;
   onWidthChange: (value: number) => void;
 };
@@ -46,15 +43,13 @@ export function AssistantDrawer({
   aiInterpretation,
   aiLoading,
   messages,
-  input,
-  setInput,
   isPending,
-  onSend,
-  onSendPrompt,
+  onSendText,
   onClear,
   onWidthChange,
 }: Props) {
   const [tab, setTab] = useState<DrawerTab>("chat");
+  const [draftInput, setDraftInput] = useState("");
   const isResizingRef = useRef(false);
 
   useEffect(() => {
@@ -88,6 +83,18 @@ export function AssistantDrawer({
       }
     };
   }, [open, onWidthChange]);
+
+  useEffect(() => {
+    if (!open) return;
+    setDraftInput("");
+  }, [analysisId, open]);
+
+  async function sendDraft() {
+    const text = draftInput.trim();
+    if (!text || isPending || !analysisId) return;
+    await onSendText(text);
+    setDraftInput("");
+  }
 
   function startResize(event: ReactMouseEvent<HTMLDivElement>) {
     if (!open || window.innerWidth <= 760) return;
@@ -162,7 +169,9 @@ export function AssistantDrawer({
                   type="button"
                   className={styles.promptBtn}
                   disabled={!analysisId || isPending}
-                  onClick={() => onSendPrompt(prompt)}
+                  onClick={() => {
+                    void onSendText(prompt);
+                  }}
                 >
                   {prompt}
                 </button>
@@ -189,19 +198,19 @@ export function AssistantDrawer({
             <textarea
               className={styles.input}
               rows={4}
-              value={input}
-              onChange={(event) => setInput(event.target.value)}
+              value={draftInput}
+              onChange={(event) => setDraftInput(event.target.value)}
               placeholder="Ask AI about ranking, risks, facies, sequence picks, or recommended actions..."
               onKeyDown={(event) => {
                 if (event.key === "Enter" && !event.shiftKey) {
                   event.preventDefault();
-                  onSend();
+                  void sendDraft();
                 }
               }}
             />
 
             <div className={styles.footer}>
-              <button type="button" className={styles.primary} onClick={onSend} disabled={!analysisId || isPending}>
+              <button type="button" className={styles.primary} onClick={() => void sendDraft()} disabled={!analysisId || isPending}>
                 {isPending ? "Sending..." : "Send"}
               </button>
               <button type="button" className={styles.secondary} onClick={onClear}>

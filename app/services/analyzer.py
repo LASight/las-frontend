@@ -566,6 +566,13 @@ def analyze_las_payloads(
 def analyze_sample_directory(sample_dir: str, with_ai: bool) -> dict:
     from pathlib import Path
 
-    paths = sorted(Path(sample_dir).glob("*.las"))
-    files = [(path.name, path.read_bytes()) for path in paths]
+    root = Path(sample_dir)
+    paths = sorted(path for path in root.rglob("*") if path.is_file() and path.suffix.lower() == ".las")
+    files = []
+    for path in paths:
+        try:
+            relative_name = str(path.relative_to(root))
+        except ValueError:
+            relative_name = path.name
+        files.append((relative_name, path.read_bytes()))
     return analyze_las_payloads(files=files, with_ai=with_ai)
