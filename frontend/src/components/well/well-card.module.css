@@ -1,0 +1,44 @@
+.wellCard {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+  padding: 0.8rem;
+  display: grid;
+  gap: 0.8rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.wellHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.7rem;
+  flex-wrap: wrap;
+}
+
+.wellTitle {
+  margin: 0;
+  color: var(--ink);
+}
+
+.wellSubTitle {
+  margin: 0.2rem 0 0;
+  color: var(--muted);
+  font-size: 0.84rem;
+  font-family: "IBM Plex Mono", monospace;
+}
+
+.tagWrap {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.tag {
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  padding: 0.2rem 0.55rem;
+  font-size: 0.74rem;
+  color: var(--muted);
+  background: var(--body-bg);
+}

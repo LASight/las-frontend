@@ -1,6 +1,6 @@
 import styles from "./tab-bar.module.css";
 
-type TabId = "overview" | "sequence";
+export type TabId = "overview" | "sequence";
 
 type Props = {
   active: TabId;

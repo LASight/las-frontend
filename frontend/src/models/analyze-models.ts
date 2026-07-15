@@ -68,6 +68,14 @@ export interface SequenceBoundary {
   to_tract: string;
 }
 
+export type BoundaryStatus = "pending" | "accepted" | "rejected";
+
+/** A boundary as rendered in the review UI: an auto/manual pick with a review status. */
+export interface SequenceBoundaryRow extends SequenceBoundary {
+  status: BoundaryStatus;
+  source?: "auto" | "manual";
+}
+
 export interface SequenceInterval {
   id: string;
   top: number;

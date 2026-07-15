@@ -89,6 +89,17 @@ export function AssistantDrawer({
     setDraftInput("");
   }, [analysisId, open]);
 
+  useEffect(() => {
+    if (!open) return;
+    function onEsc(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        onToggle();
+      }
+    }
+    window.addEventListener("keydown", onEsc);
+    return () => window.removeEventListener("keydown", onEsc);
+  }, [open, onToggle]);
+
   async function sendDraft() {
     const text = draftInput.trim();
     if (!text || isPending || !analysisId) return;

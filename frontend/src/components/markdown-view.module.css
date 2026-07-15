@@ -1,0 +1,13 @@
+.markdown {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  padding: 0.8rem 1rem;
+  overflow-wrap: anywhere;
+}
+
+.markdown p,
+.markdown li {
+  color: var(--ink);
+  line-height: 1.6;
+}
