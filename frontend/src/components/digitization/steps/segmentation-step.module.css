@@ -1,0 +1,20 @@
+.progressTrack {
+  height: 10px;
+  border-radius: 5px;
+  background: var(--body-bg);
+  border: 1px solid var(--line);
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent-teal), var(--accent-green));
+  transition: width 320ms ease;
+}
+
+.progressText {
+  margin: 0.5rem 0 0;
+  font-size: 0.82rem;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}

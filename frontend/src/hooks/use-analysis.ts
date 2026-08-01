@@ -7,6 +7,7 @@ import {
   analyzeSamples,
   analyzeUploads,
   fetchAiInterpretation,
+  fetchAnalysis,
 } from "../services/api-service";
 import { useFileValidation } from "./use-file-validation";
 
@@ -82,6 +83,24 @@ export function useAnalysis(options: Options = {}) {
     await fileValidation.validate(fileList);
   }
 
+  /**
+   * Load an analysis the backend has already run, by id.
+   *
+   * The digitization workspace's handoff: it exports a LAS, the backend
+   * analyzes it and returns an id, and this picks the result up so the user
+   * lands on the Overview tab instead of re-uploading the file they just
+   * produced.
+   */
+  async function adoptAnalysis(analysisId: string) {
+    setStatus("Loading digitized well...");
+    try {
+      await handlePostAnalyze(await fetchAnalysis(analysisId));
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Could not load analysis.";
+      setStatus(`Error: ${message}`);
+    }
+  }
+
   async function proceedWithAnalysis(decisions: ValidationDecision[]) {
     if (!fileList) return;
     fileValidation.reset();
@@ -103,6 +122,7 @@ export function useAnalysis(options: Options = {}) {
     runSampleAnalysis,
     runUploadAnalysis,
     proceedWithAnalysis,
+    adoptAnalysis,
     fileValidation,
     isBusy: sampleMutation.isPending || uploadMutation.isPending || fileValidation.state === "validating",
   };

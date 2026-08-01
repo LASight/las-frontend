@@ -1,0 +1,31 @@
+.meta {
+  padding: 0.2rem 0.5rem 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.fileName {
+  margin: 0;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--sb-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dim {
+  margin: 0;
+  font-size: 0.72rem;
+  color: var(--sb-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.warning {
+  margin: 0;
+  padding: 0.4rem 0.5rem;
+  font-size: 0.72rem;
+  line-height: 1.4;
+  color: var(--warn);
+}

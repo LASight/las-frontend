@@ -1,19 +1,27 @@
-import type { AiResponse, AnalyzePayload, ChatResponse, PreValidatePayload, ValidationDecision } from "../models/analyze-models";
-
-const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000";
-
-async function apiRequest<T>(path: string, init: RequestInit): Promise<T> {
-  const response = await fetch(`${API_BASE}${path}`, init);
-  if (!response.ok) {
-    throw new Error(`Request failed (${response.status})`);
-  }
-  return (await response.json()) as T;
-}
+import type {
+  AiResponse,
+  AnalyzePayload,
+  ChatResponse,
+  PreValidatePayload,
+  ValidationDecision,
+} from "../models/analyze-models";
+import { apiRequest, postJson } from "./http-client";
 
 export async function analyzeSamples(): Promise<AnalyzePayload> {
   return apiRequest<AnalyzePayload>("/api/analyze-samples?with_ai=false", {
     method: "POST",
   });
+}
+
+/**
+ * Re-fetch a completed analysis by id.
+ *
+ * Used when the digitization workspace hands over a freshly exported LAS: the
+ * backend has already run the analysis, so the user should land on the results
+ * rather than re-upload the file they just produced.
+ */
+export async function fetchAnalysis(analysisId: string): Promise<AnalyzePayload> {
+  return apiRequest<AnalyzePayload>(`/api/analyses/${analysisId}`);
 }
 
 export async function preValidateFiles(files: FileList | File[]): Promise<PreValidatePayload> {
@@ -44,14 +52,13 @@ export async function analyzeUploads(
   });
 }
 
-export async function fetchAiInterpretation(analysisId: string, withAi: boolean): Promise<AiResponse> {
-  return apiRequest<AiResponse>("/api/ai-interpretation", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      analysis_id: analysisId,
-      with_ai: withAi,
-    }),
+export async function fetchAiInterpretation(
+  analysisId: string,
+  withAi: boolean
+): Promise<AiResponse> {
+  return postJson<AiResponse>("/api/ai-interpretation", {
+    analysis_id: analysisId,
+    with_ai: withAi,
   });
 }
 
@@ -61,14 +68,10 @@ export async function fetchChatAnswer(
   history: Array<{ role: string; content: string }>,
   withAi: boolean
 ): Promise<ChatResponse> {
-  return apiRequest<ChatResponse>("/api/chat-data", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      analysis_id: analysisId,
-      question,
-      history,
-      with_ai: withAi,
-    }),
+  return postJson<ChatResponse>("/api/chat-data", {
+    analysis_id: analysisId,
+    question,
+    history,
+    with_ai: withAi,
   });
 }

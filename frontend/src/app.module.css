@@ -20,6 +20,19 @@
   filter: saturate(1.08);
 }
 
+/* Workspace-level failure, e.g. a digitization job that no longer exists
+   because the server restarted. */
+.errorText {
+  margin: 0;
+  padding: 0.6rem 0.75rem;
+  border-radius: 7px;
+  border: 1px solid var(--danger);
+  background: rgba(255, 110, 116, 0.08);
+  color: var(--danger);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
 /* ── Responsive ─────────────────────────────────────────────── */
 @media (max-width: 768px) {
   .appLayout {

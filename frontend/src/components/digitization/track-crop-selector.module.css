@@ -1,0 +1,81 @@
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.host {
+  position: relative;
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--surface);
+  user-select: none;
+  touch-action: none;
+}
+
+.overview {
+  display: block;
+  width: 100%;
+  height: 100%;
+  /* `fill` on purpose: the strip is a navigation aid for finding the track's
+     columns, and preserving a 1:20 aspect ratio would make it unusably narrow. */
+  object-fit: fill;
+  image-rendering: crisp-edges;
+}
+
+.mask {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: rgba(15, 22, 32, 0.5);
+  pointer-events: none;
+}
+
+.selection {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-left: 2px solid var(--accent-teal);
+  border-right: 2px solid var(--accent-teal);
+  background: rgba(56, 185, 217, 0.08);
+  pointer-events: none;
+}
+
+.handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 14px;
+  margin-left: -7px;
+  cursor: col-resize;
+  background: transparent;
+}
+
+.handle::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 5px;
+  width: 4px;
+  background: var(--accent-teal);
+  border-radius: 2px;
+}
+
+.handle:focus-visible {
+  outline: 2px solid var(--accent-orange);
+  outline-offset: 2px;
+}
+
+.handleActive::before {
+  background: var(--accent-orange);
+}
+
+.scaleNote {
+  margin: 0;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: var(--muted);
+}
