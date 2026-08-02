@@ -1,8 +1,7 @@
 # WellSight — web app
 
-> **Note.** The backend moved to the sibling `las-backend` repo. The `app/`
-> directory here is a stale copy kept only as a fallback; the React app under
-> `frontend/` is the live UI.
+> **Note.** This repo is the frontend only. The API lives in the sibling
+> **`las-backend`** repo and must be running for anything here to work.
 
 Two workspaces, one product:
 
@@ -72,55 +71,34 @@ A localhost web app for oil & gas LAS analysis that goes beyond file reading:
 - Demo mode for showcases with one-click CSV/PDF export
 
 ## Tech Stack
-- Backend API: FastAPI (Python)
-- Data/Science: lasio, pandas, numpy, scipy, scikit-learn
-- Frontend (modern): React + TypeScript + Vite + TanStack Query + Zustand + Plotly
+React + TypeScript + Vite + TanStack Query + Zustand + Plotly. The API, the LAS
+parsing and all of the science (lasio, numpy, scipy, scikit-learn) live in
+`las-backend`.
 
 ## Project Structure
-- `app/main.py`: FastAPI app and API routes
-- `app/services/las_parser.py`: LAS parsing + curve mapping
-- `app/services/qc.py`: data quality and physics sanity checks
-- `app/services/petrophysics.py`: Vsh/Phi/Sw and potential pay intervals
-- `app/services/ml.py`: anomaly detection + electrofacies clustering
-- `app/services/sequence.py`: sequence stratigraphy auto-picks + correlation
-- `app/services/ai.py`: AI interpretation (with fallback)
-- `app/services/analyzer.py`: orchestration and portfolio summary
-- `frontend/`: React TypeScript frontend
-- `app/static/`: legacy static frontend (kept for fallback)
-- `LAS_Sample_API/`: provided sample LAS files
+- `frontend/`: the app — see [Frontend layout](#frontend-layout) below
+- `LAS Files/`: LAS fixtures used for import-validation testing, including a
+  deliberately corrupt set
 
-## Run Locally (Modern Frontend)
-1. Create and activate a virtual environment.
-2. Install dependencies:
+## Run Locally
+1. Start the API from the sibling repo (see `las-backend/README.md`):
    ```bash
-   pip install -r requirements.txt
+   cd ../las-backend && uvicorn app.main:app --reload
    ```
-3. Optional: enable AI interpretation with API key:
-   ```bash
-   cp .env.example .env
-   # set GEMINI_API_KEY in .env (preferred)
-   ```
-4. Start backend API:
-   ```bash
-   uvicorn app.main:app --reload
-   ```
-5. In a second terminal, start frontend:
+2. In a second terminal, start the frontend:
    ```bash
    cd frontend
    npm install
    cp .env.example .env
    npm run dev
    ```
-6. Open:
+3. Open:
    - Frontend: `http://127.0.0.1:5173`
    - Backend API docs: `http://127.0.0.1:8000/docs`
 
-## Run Locally (Legacy Fallback)
-If needed, legacy static UI is still available:
-```bash
-./run_local.sh
-```
-Then open `http://127.0.0.1:8000`.
+`VITE_API_BASE_URL` in `frontend/.env` points at the API and defaults to
+`http://127.0.0.1:8000`. To work on the digitization wizard without a backend at
+all, use [mock mode](#mock-mode) instead.
 
 ## Demo Flow
 1. Open the web UI.
@@ -160,19 +138,21 @@ cd frontend && npm test     # 83 tests, no DOM needed for the controllers
 ```
 
 ## Notes
-- ChatGPT Plus does not include API credits automatically. API usage is separate billing.
-- AI interpretation is Gemini-first (`GEMINI_API_KEY`, model default `gemini-2.5-pro`), with OpenAI as optional fallback.
+- No API keys belong in this repo. `frontend/.env` holds only the API base URL
+  and the mock-mode flag; AI provider keys are configured in `las-backend`.
+- AI interpretation is Gemini-first with OpenAI as optional fallback, and falls
+  back to a rule-based summary when neither key is set — see `las-backend`.
 - Current petrophysical equations are screening-grade defaults; calibration with field/core data is required before operational use.
 
 ## GitHub Upload Safety
-1. Keep real API keys only in local `.env` (already ignored by `.gitignore`).
-2. Use `.env.example` for placeholders only.
-3. Before pushing, verify:
+1. Use `frontend/.env.example` for placeholders only; keep any local overrides in
+   `frontend/.env` (already ignored by `.gitignore`).
+2. Before pushing, verify:
    ```bash
    git status
-   git check-ignore -v .env .venv
+   git check-ignore -v frontend/.env
    ```
-4. If a secret was ever committed, rotate the key immediately and purge it from git history before publishing.
+3. If a secret was ever committed, rotate the key immediately and purge it from git history before publishing.
 
 ## Suggested Next Iterations
 1. Add lithology/facies labels and supervised ML models.

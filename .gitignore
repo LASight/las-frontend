@@ -13,34 +13,6 @@
 *.secrets
 
 # -----------------------------
-# Python
-# -----------------------------
-__pycache__/
-*.py[cod]
-*$py.class
-.python-version
-.pytest_cache/
-.mypy_cache/
-.ruff_cache/
-.coverage
-.coverage.*
-htmlcov/
-.tox/
-.nox/
-
-# Virtual environments
-.venv/
-venv/
-env/
-ENV/
-
-# Build / packaging
-build/
-dist/
-*.egg-info/
-.eggs/
-
-# -----------------------------
 # JS / frontend tooling
 # -----------------------------
 node_modules/
@@ -49,6 +21,14 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+
+# -----------------------------
+# Leftover Python virtualenvs
+# -----------------------------
+# The backend moved to the sibling las-backend repo; these only guard against a
+# stale local .venv from before the split showing up in git status.
+.venv/
+venv/
 
 # -----------------------------
 # IDE / editor
