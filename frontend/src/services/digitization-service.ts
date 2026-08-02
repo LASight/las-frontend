@@ -59,6 +59,8 @@ export interface DigitizationGateway {
       x0?: number;
       x1?: number;
       scale?: number;
+      scaleX?: number;
+      scaleY?: number;
       layer?: TileLayer;
     }
   ): string;
@@ -152,6 +154,8 @@ export class HttpDigitizationGateway implements DigitizationGateway {
       x0?: number;
       x1?: number;
       scale?: number;
+      scaleX?: number;
+      scaleY?: number;
       layer?: TileLayer;
     }
   ): string {
@@ -162,6 +166,8 @@ export class HttpDigitizationGateway implements DigitizationGateway {
     if (options.x0 !== undefined) params.set("x0", String(Math.floor(options.x0)));
     if (options.x1 !== undefined) params.set("x1", String(Math.ceil(options.x1)));
     if (options.scale !== undefined) params.set("scale", options.scale.toFixed(4));
+    if (options.scaleX !== undefined) params.set("scale_x", options.scaleX.toFixed(4));
+    if (options.scaleY !== undefined) params.set("scale_y", options.scaleY.toFixed(4));
     if (options.layer) params.set("layer", options.layer);
     return `${API_BASE}${BASE}/jobs/${jobId}/tile?${params.toString()}`;
   }

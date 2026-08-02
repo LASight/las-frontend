@@ -336,20 +336,23 @@ export class MockDigitizationGateway implements DigitizationGateway {
       x0?: number;
       x1?: number;
       scale?: number;
+      scaleX?: number;
+      scaleY?: number;
       layer?: TileLayer;
     }
   ): string {
     const job = this.jobs.get(jobId);
     if (!job) return "";
 
-    const scale = options.scale ?? 1;
+    const scaleX = options.scaleX ?? options.scale ?? 1;
+    const scaleY = options.scaleY ?? options.scale ?? 1;
     const x0 = options.x0 ?? 0;
     const x1 = options.x1 ?? job.summary.raster.width;
     const y0 = Math.max(0, Math.floor(options.y0));
     const y1 = Math.min(job.summary.raster.height, Math.ceil(options.y1));
 
-    const width = Math.max(1, Math.round((x1 - x0) * scale));
-    const height = Math.max(1, Math.round((y1 - y0) * scale));
+    const width = Math.max(1, Math.round((x1 - x0) * scaleX));
+    const height = Math.max(1, Math.round((y1 - y0) * scaleY));
 
     const canvas = document.createElement("canvas");
     canvas.width = width;
@@ -364,14 +367,14 @@ export class MockDigitizationGateway implements DigitizationGateway {
       context.strokeStyle = "rgba(60,60,60,0.22)";
       context.lineWidth = 1;
       for (let y = y0 - (y0 % 20); y < y1; y += 20) {
-        const py = (y - y0) * scale;
+        const py = (y - y0) * scaleY;
         context.beginPath();
         context.moveTo(0, py);
         context.lineTo(width, py);
         context.stroke();
       }
       for (let x = x0 - (x0 % 60); x < x1; x += 60) {
-        const px = (x - x0) * scale;
+        const px = (x - x0) * scaleX;
         context.beginPath();
         context.moveTo(px, 0);
         context.lineTo(px, height);
@@ -380,11 +383,11 @@ export class MockDigitizationGateway implements DigitizationGateway {
     }
 
     context.strokeStyle = options.layer === "mask" ? "#c2410c" : "#101010";
-    context.lineWidth = Math.max(1, 2 * scale);
+    context.lineWidth = Math.max(1, 2 * Math.min(scaleX, scaleY));
     context.beginPath();
     for (let y = y0; y < y1; y += 1) {
-      const px = (job.trueX[y] * job.summary.raster.width - x0) * scale;
-      const py = (y - y0) * scale;
+      const px = (job.trueX[y] * job.summary.raster.width - x0) * scaleX;
+      const py = (y - y0) * scaleY;
       if (y === y0) context.moveTo(px, py);
       else context.lineTo(px, py);
     }

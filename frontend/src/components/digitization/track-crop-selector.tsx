@@ -13,7 +13,7 @@ import styles from "./track-crop-selector.module.css";
  * a correctness one: the model trained on single GR tracks, and a whole
  * multi-track scan is a domain shift that produces confident nonsense.
  *
- * The whole log is shown as one heavily downsampled strip. A real scan is
+ * The whole log is shown as one vertically downsampled strip. A real scan is
  * 30,000–127,000 px tall, so this is a thumbnail by necessity — it is for
  * finding the track's *columns*, which is all the crop needs. Depth bounds
  * default to the full height and are adjusted numerically, because no one can
@@ -37,14 +37,21 @@ export function TrackCropSelector({ job, crop, onChange }: Props) {
 
   const { width, height } = job.raster;
 
-  /** Downsample factor that fits the whole log into the strip. */
+  /** Vertical downsample factor that fits the whole log into the strip. */
   const scale = useMemo(
     () => Math.min(1, OVERVIEW_HEIGHT_PX / Math.max(1, height)),
     [height]
   );
 
   const overviewUrl = useMemo(
-    () => digitizationGateway.tileUrl(job.job_id, { y0: 0, y1: height, scale }),
+    () =>
+      digitizationGateway.tileUrl(job.job_id, {
+        y0: 0,
+        y1: height,
+        // Preserve the source columns. Shrinking both axes turned a 2,705 px
+        // raster into a ~14 px-wide thumbnail and CSS then enlarged its blur.
+        scaleY: scale,
+      }),
     [job.job_id, height, scale]
   );
 
@@ -149,9 +156,10 @@ export function TrackCropSelector({ job, crop, onChange }: Props) {
       </div>
 
       <p className={styles.scaleNote}>
-        Whole log shown at {(scale * 100).toFixed(1)}% of full size —{" "}
-        {height.toLocaleString()} rows compressed into {displayHeight} pixels. Drag the
-        handles to bound the track's columns; set the depth interval numerically below.
+        Whole log height shown at {(scale * 100).toFixed(1)}% —{" "}
+        {height.toLocaleString()} rows compressed into {displayHeight} pixels while every
+        source column is retained. Drag the handles to bound the track's columns; set the
+        depth interval numerically below.
       </p>
     </div>
   );
