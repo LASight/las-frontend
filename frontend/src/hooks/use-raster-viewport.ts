@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type { TileLayer } from "../models/digitization-models";
 import { digitizationGateway } from "../services/digitization-service";
+import { loadImage } from "./tile-loader";
 
 /**
  * A scrollable window onto a raster far too large to hold in the browser.
@@ -48,18 +49,6 @@ interface Options {
   viewportHeight: number;
   /** Vertical zoom: canvas pixels per image row. */
   zoom: number;
-}
-
-function loadImage(url: string): Promise<HTMLImageElement> {
-  return new Promise((resolve, reject) => {
-    const image = new Image();
-    // The tile endpoint is same-origin in dev via the API base, but the backend
-    // may be on a different port; anonymous CORS keeps the canvas untainted.
-    image.crossOrigin = "anonymous";
-    image.onload = () => resolve(image);
-    image.onerror = () => reject(new Error(`Tile failed to load: ${url}`));
-    image.src = url;
-  });
 }
 
 export function useRasterViewport({

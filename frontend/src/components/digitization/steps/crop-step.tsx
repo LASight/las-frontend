@@ -3,8 +3,9 @@ import { useNavigate } from "react-router-dom";
 
 import { DEFAULT_PREPROCESS, type TrackCrop } from "../../../models/digitization-models";
 import { SectionPanel } from "../../section-panel";
+import { defaultCrop, normalizeCrop } from "../cropper/crop-rect";
+import { TrackCropper } from "../cropper/track-cropper";
 import { useJobController } from "../job-context";
-import { TrackCropSelector } from "../track-crop-selector";
 import styles from "./step-layout.module.css";
 
 /**
@@ -21,25 +22,25 @@ export function CropStep() {
   const [crop, setLocalCrop] = useState<TrackCrop | null>(null);
   const [settings, setSettings] = useState(DEFAULT_PREPROCESS);
 
-  // Default to the middle 60% of the width: historical logs put a depth-number
-  // column on the left and a margin on the right, so the track is never the
-  // full frame. It is a starting point to drag from, not a guess at the answer.
   useEffect(() => {
     if (!job || crop) return;
-    setLocalCrop(
-      job.crop ?? {
-        x_left: Math.round(job.raster.width * 0.2),
-        x_right: Math.round(job.raster.width * 0.8),
-        y_top: 0,
-        y_bottom: job.raster.height,
-      }
-    );
+    setLocalCrop(job.crop ?? defaultCrop(job.raster));
   }, [job, crop]);
 
   if (!job || !crop) return null;
 
   const preprocessResult = job.preprocess;
   const cropError = crop.y_bottom <= crop.y_top ? "Bottom row must be below top row." : null;
+
+  /**
+   * Repair a typed value before it reaches the crop.
+   *
+   * The `min`/`max` attributes below are advisory — a keyboard ignores them —
+   * so without this an inverted or out-of-raster crop reaches the pipeline and
+   * produces a calibration that is arithmetically fine and meaningless.
+   */
+  const editCrop = (patch: Partial<TrackCrop>) =>
+    setLocalCrop(normalizeCrop({ ...crop, ...patch }, job.raster));
 
   return (
     <>
@@ -135,7 +136,7 @@ export function CropStep() {
           multi-track scan produces confident nonsense.
         </p>
 
-        <TrackCropSelector job={job} crop={crop} onChange={setLocalCrop} />
+        <TrackCropper job={job} crop={crop} onChange={setLocalCrop} />
 
         <div className={styles.fieldGrid}>
           <div className={styles.field}>
@@ -149,9 +150,7 @@ export function CropStep() {
               value={crop.x_left}
               min={0}
               max={crop.x_right - 20}
-              onChange={(event) =>
-                setLocalCrop({ ...crop, x_left: Number(event.target.value) })
-              }
+              onChange={(event) => editCrop({ x_left: Number(event.target.value) })}
             />
           </div>
           <div className={styles.field}>
@@ -165,9 +164,7 @@ export function CropStep() {
               value={crop.x_right}
               min={crop.x_left + 20}
               max={job.raster.width}
-              onChange={(event) =>
-                setLocalCrop({ ...crop, x_right: Number(event.target.value) })
-              }
+              onChange={(event) => editCrop({ x_right: Number(event.target.value) })}
             />
           </div>
           <div className={styles.field}>
@@ -181,9 +178,7 @@ export function CropStep() {
               value={crop.y_top}
               min={0}
               max={crop.y_bottom - 1}
-              onChange={(event) =>
-                setLocalCrop({ ...crop, y_top: Number(event.target.value) })
-              }
+              onChange={(event) => editCrop({ y_top: Number(event.target.value) })}
             />
           </div>
           <div className={styles.field}>
@@ -197,9 +192,7 @@ export function CropStep() {
               value={crop.y_bottom}
               min={crop.y_top + 1}
               max={job.raster.height}
-              onChange={(event) =>
-                setLocalCrop({ ...crop, y_bottom: Number(event.target.value) })
-              }
+              onChange={(event) => editCrop({ y_bottom: Number(event.target.value) })}
             />
           </div>
         </div>

@@ -1,0 +1,224 @@
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.toolbar button {
+  font: inherit;
+  padding: 0.25rem 0.6rem;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+  color: inherit;
+  cursor: pointer;
+}
+
+.toolbar button:hover:not(:disabled) {
+  border-color: var(--accent-teal);
+  color: var(--accent-teal);
+}
+
+.toolbar button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.zoomLabel {
+  min-width: 5.5rem;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.spacer {
+  flex: 1;
+}
+
+.readout {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Stage and minimap share a row: the log is tall and thin, so the navigator
+   belongs beside it, not stacked under it where it would repeat the height. */
+.stageRow {
+  display: flex;
+  gap: 0.5rem;
+  align-items: stretch;
+  height: 520px;
+}
+
+.stage {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--surface);
+  /* The image is composited under the pointer; a text caret or a drag-selection
+     highlight would both be wrong here. */
+  user-select: none;
+  touch-action: none;
+  cursor: grab;
+}
+
+.stagePanning {
+  cursor: grabbing;
+}
+
+.canvas {
+  display: block;
+  position: absolute;
+  inset: 0;
+  /* Nearest-neighbour past 1:1. These are bilevel scans, and a smoothed pixel
+     edge at 8x makes it impossible to tell which column a handle is on. */
+  image-rendering: pixelated;
+}
+
+/* The four panels dimming everything outside the selection. Separate elements
+   rather than one box-shadow so each side clips exactly at the stage edge. */
+.shade {
+  position: absolute;
+  background: rgba(12, 18, 28, 0.55);
+  pointer-events: none;
+}
+
+.selection {
+  position: absolute;
+  border: 1.5px solid var(--accent-teal);
+  box-shadow: 0 0 0 1px rgba(12, 18, 28, 0.55);
+  pointer-events: none;
+}
+
+/* Rule-of-thirds guides, the standard cue that a rectangle is being composed. */
+.guide {
+  position: absolute;
+  background: rgba(255, 255, 255, 0.28);
+  pointer-events: none;
+}
+
+.handle {
+  position: absolute;
+  background: transparent;
+  border: 0;
+  padding: 0;
+}
+
+.handle:focus-visible {
+  outline: 2px solid var(--accent-orange);
+  outline-offset: 2px;
+  z-index: 2;
+}
+
+.handleGrip {
+  position: absolute;
+  background: var(--accent-teal);
+  border-radius: 2px;
+  pointer-events: none;
+}
+
+.handleActive .handleGrip {
+  background: var(--accent-orange);
+}
+
+.corner {
+  width: 22px;
+  height: 22px;
+}
+
+.corner .handleGrip {
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  border: 3px solid var(--accent-teal);
+  border-radius: 3px;
+}
+
+.cornerTopLeft .handleGrip {
+  border-right-color: transparent;
+  border-bottom-color: transparent;
+}
+
+.cornerTopRight .handleGrip {
+  border-left-color: transparent;
+  border-bottom-color: transparent;
+}
+
+.cornerBottomLeft .handleGrip {
+  border-right-color: transparent;
+  border-top-color: transparent;
+}
+
+.cornerBottomRight .handleGrip {
+  border-left-color: transparent;
+  border-top-color: transparent;
+}
+
+.corner.handleActive .handleGrip {
+  border-color: var(--accent-orange);
+}
+
+.edgeVertical {
+  width: 18px;
+}
+
+.edgeVertical .handleGrip {
+  top: 50%;
+  left: 7px;
+  width: 4px;
+  height: 32px;
+  transform: translateY(-50%);
+}
+
+.edgeHorizontal {
+  height: 18px;
+}
+
+.edgeHorizontal .handleGrip {
+  left: 50%;
+  top: 7px;
+  height: 4px;
+  width: 32px;
+  transform: translateX(-50%);
+}
+
+.status {
+  position: absolute;
+  left: 0.6rem;
+  bottom: 0.6rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  background: rgba(12, 18, 28, 0.75);
+  color: #f4f7fa;
+  font-size: 0.72rem;
+  pointer-events: none;
+}
+
+.error {
+  position: absolute;
+  left: 0.6rem;
+  top: 0.6rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  background: rgba(192, 57, 43, 0.9);
+  color: #fff;
+  font-size: 0.72rem;
+  pointer-events: none;
+}
+
+.hint {
+  margin: 0;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: var(--muted);
+}
