@@ -43,9 +43,26 @@ interface Options {
   viewport: Size;
   /** The element that receives wheel and gesture events. */
   targetRef: React.RefObject<HTMLElement | null>;
+  /**
+   * What a plain, unmodified wheel does.
+   *
+   * `"zoom"` for the crop editor, where dragging already pans and the wheel has
+   * nothing else to do. `"pan"` for the review canvas, where dragging is the
+   * *edit* gesture — redrawing a stretch of curve — so the wheel is the only
+   * way to travel and taking it for zoom would strand the reviewer.
+   *
+   * Ctrl/Cmd + wheel zooms at the cursor under either mode, matching how every
+   * document viewer behaves, and a trackpad pinch arrives as exactly that.
+   */
+  wheel?: "zoom" | "pan";
 }
 
-export function usePanZoom({ image, viewport, targetRef }: Options) {
+export function usePanZoom({
+  image,
+  viewport,
+  targetRef,
+  wheel = "zoom",
+}: Options) {
   const [view, setViewState] = useState<ViewTransform>(() =>
     initialView(image, viewport)
   );
@@ -182,15 +199,28 @@ export function usePanZoom({ image, viewport, targetRef }: Options) {
         x: event.clientX - rect.left,
         y: event.clientY - rect.top,
       };
+
       // Browsers report a trackpad pinch as a wheel event with ctrlKey set —
-      // there is no separate pinch event on desktop.
-      const rate = event.ctrlKey ? PINCH_ZOOM_RATE : WHEEL_ZOOM_RATE;
-      apply(zoomAt(viewRef.current, anchor, Math.exp(-event.deltaY * rate)));
+      // there is no separate pinch event on desktop — so a deliberate ctrl+wheel
+      // and a pinch are indistinguishable here, and both should zoom.
+      const zooming = wheel === "zoom" || event.ctrlKey || event.metaKey;
+      if (zooming) {
+        const rate = event.ctrlKey ? PINCH_ZOOM_RATE : WHEEL_ZOOM_RATE;
+        apply(zoomAt(viewRef.current, anchor, Math.exp(-event.deltaY * rate)));
+        return;
+      }
+
+      // Scroll in *screen* pixels, so a notch travels the same visible distance
+      // at every zoom level. Shift swaps the axis, the usual convention.
+      const delta = event.shiftKey
+        ? { x: -event.deltaY - event.deltaX, y: 0 }
+        : { x: -event.deltaX, y: -event.deltaY };
+      apply(panBy(viewRef.current, delta, image, viewport));
     }
 
     element.addEventListener("wheel", handleWheel, { passive: false });
     return () => element.removeEventListener("wheel", handleWheel);
-  }, [targetRef, apply]);
+  }, [targetRef, apply, wheel, image, viewport]);
 
   return {
     view,

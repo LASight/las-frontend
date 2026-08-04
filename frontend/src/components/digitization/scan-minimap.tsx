@@ -1,21 +1,26 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import type { TrackCrop } from "../../../models/digitization-models";
-import { digitizationGateway } from "../../../services/digitization-service";
-import styles from "./crop-minimap.module.css";
-import type { Size } from "./viewport-transform";
+import type { TrackCrop } from "../../models/digitization-models";
+import { digitizationGateway } from "../../services/digitization-service";
+import styles from "./scan-minimap.module.css";
+import type { Size } from "./cropper/viewport-transform";
 
 /**
- * The whole log at a glance, and the only way to travel 55,000 rows quickly.
+ * The whole scan at a glance, and the only way to travel 55,000 rows quickly.
  *
- * The crop stage shows at most a few thousand rows at a legible zoom. Scrolling
- * from the top of a real scan to the bottom at that rate is minutes of dragging,
- * so this strip exists purely to jump: click a depth, the stage goes there.
+ * Shared by the crop editor and the review canvas, which have the same problem:
+ * both show at most a few thousand rows at a legible zoom, and scrolling a real
+ * log end to end at that rate is minutes of dragging. Click a depth, go there.
+ *
+ * It always draws the **whole raster**, including the parts the crop excludes,
+ * and marks the crop on top. In review that is the point: the canvas beside it
+ * deliberately shows only the cropped track, so this is the only place the
+ * reviewer can see where that track sits in the original scan — and confirm the
+ * header really was left out.
  *
  * It is emphatically *not* where the crop is set. A 55,000-row log squashed into
  * a few hundred pixels puts ~130 source rows in each strip row — good enough to
  * see where the log has data and where it is blank, useless for picking an edge.
- * The strip therefore only shows the selection; the stage sets it.
  */
 
 type Props = {
@@ -38,7 +43,7 @@ type Props = {
  */
 const SIZE_QUANTUM_PX = 32;
 
-export function CropMinimap({
+export function ScanMinimap({
   jobId,
   fileName,
   image,

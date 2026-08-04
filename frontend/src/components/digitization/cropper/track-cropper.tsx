@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type { JobSummary, TrackCrop } from "../../../models/digitization-models";
-import { CropMinimap } from "./crop-minimap";
+import { ScanMinimap } from "../scan-minimap";
 import styles from "./track-cropper.module.css";
 import {
   CORNER_HANDLES,
@@ -387,7 +387,7 @@ export function TrackCropper({ job, crop, onChange }: Props) {
           {isLoading && !error && <div className={styles.status}>Loading tiles…</div>}
         </div>
 
-          <CropMinimap
+          <ScanMinimap
             jobId={job.job_id}
             fileName={job.file_name}
             image={image}

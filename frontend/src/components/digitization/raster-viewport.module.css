@@ -91,12 +91,9 @@
 
 .canvas {
   display: block;
-  touch-action: none; /* pointer drags are edits, not page scrolls */
-  cursor: crosshair;
-}
-
-.canvasEditing {
-  cursor: cell;
+  touch-action: none; /* pointer drags are edits or pans, not page scrolls */
+  /* The cursor is set inline: it depends on the active tool *and* on whether a
+     pan is in progress, which CSS cannot see. */
 }
 
 .loading,
@@ -118,24 +115,14 @@
   border-color: var(--danger);
 }
 
-/* ── Depth scrubber ──────────────────────────────────────────── */
-/* Vertical because depth runs top to bottom; a horizontal scrollbar for depth
-   would fight every convention in the industry. */
-.scrubber {
-  writing-mode: vertical-lr;
-  width: 22px;
-  height: auto;
-  accent-color: var(--accent-teal);
-  cursor: pointer;
-}
-
 /* ── Value axis labels ───────────────────────────────────────── */
 .axisLabels {
   position: relative;
   height: 1.1rem;
-  /* Matches .scrubber plus its gap, so labels line up with the canvas rather
-     than with the whole row. */
-  margin-right: 30px;
+  /* The minimap's width plus .canvasRow's gap, so the value ticks line up with
+     the canvas rather than with the whole row. Keep these in step: the labels
+     silently drift off the curve if the minimap is ever resized. */
+  margin-right: calc(76px + 0.5rem);
   font-size: 0.7rem;
   color: var(--muted);
   font-variant-numeric: tabular-nums;
