@@ -10,9 +10,9 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
+  gap: 1.1rem;
   flex-wrap: wrap;
-  padding: 0.4rem 0.6rem;
+  padding: 0.45rem 0.7rem;
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -24,12 +24,15 @@
   font-variant-numeric: tabular-nums;
   font-weight: 600;
   color: var(--ink);
+  flex-shrink: 0;
 }
 
 .zoomControls {
   display: flex;
   align-items: center;
   gap: 0.35rem;
+  flex-shrink: 0;
+  flex-wrap: nowrap;
 }
 
 .zoomControls button {
@@ -45,6 +48,17 @@
   display: grid;
   place-items: center;
   font-family: inherit;
+}
+
+.zoomActionButton {
+  width: auto;
+  min-width: 96px;
+  height: auto;
+  min-height: 28px;
+  padding: 0 0.7rem;
+  white-space: nowrap;
+  font-size: 0.82rem;
+  flex-shrink: 0;
 }
 
 .zoomControls button:hover:not(:disabled) {
@@ -65,6 +79,7 @@
 .readout {
   font-variant-numeric: tabular-nums;
   color: var(--ink);
+  flex-shrink: 0;
 }
 
 /* ── Canvas ──────────────────────────────────────────────────── */

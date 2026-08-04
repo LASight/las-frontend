@@ -437,10 +437,20 @@ export function RasterViewport({
           <button type="button" onClick={() => pan.zoomTo(1)} title="Actual pixels">
             1:1
           </button>
-          <button type="button" onClick={pan.fitWidth} title="Fit the track's width">
+          <button
+            type="button"
+            className={styles.zoomActionButton}
+            onClick={pan.fitWidth}
+            title="Fit the track's width"
+          >
             Fit width
           </button>
-          <button type="button" onClick={pan.fitHeight} title="Show the whole run">
+          <button
+            type="button"
+            className={styles.zoomActionButton}
+            onClick={pan.fitHeight}
+            title="Show the whole run"
+          >
             Whole run
           </button>
         </div>
