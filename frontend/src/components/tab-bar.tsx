@@ -1,29 +1,42 @@
+import { NavLink } from "react-router-dom";
+
 import styles from "./tab-bar.module.css";
 
 export type TabId = "overview" | "sequence";
 
-type Props = {
-  active: TabId;
-  onChange: (tab: TabId) => void;
+type Tab = {
+  to: string;
+  label: string;
+  /** `end` so /analysis does not stay highlighted while /analysis/sequence is open. */
+  end?: boolean;
 };
 
-export function TabBar({ active, onChange }: Props) {
+const TABS: Tab[] = [
+  { to: "/analysis", label: "Overview", end: true },
+  { to: "/analysis/sequence", label: "Sequence Stratigraphy" },
+];
+
+/**
+ * Tabs within the analysis workspace.
+ *
+ * Routes rather than local state, so a tab is linkable and survives a refresh —
+ * the same reason the digitization wizard's steps are routes.
+ */
+export function TabBar() {
   return (
     <div className={styles.tabs}>
-      <button
-        type="button"
-        className={`${styles.tab} ${active === "overview" ? styles.active : ""}`}
-        onClick={() => onChange("overview")}
-      >
-        Overview
-      </button>
-      <button
-        type="button"
-        className={`${styles.tab} ${active === "sequence" ? styles.active : ""}`}
-        onClick={() => onChange("sequence")}
-      >
-        Sequence Stratigraphy
-      </button>
+      {TABS.map((tab) => (
+        <NavLink
+          key={tab.to}
+          to={tab.to}
+          end={tab.end}
+          className={({ isActive }) =>
+            `${styles.tab} ${isActive ? styles.active : ""}`
+          }
+        >
+          {tab.label}
+        </NavLink>
+      ))}
     </div>
   );
 }

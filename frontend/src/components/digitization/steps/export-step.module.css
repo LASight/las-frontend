@@ -1,0 +1,17 @@
+.preview {
+  margin: 0;
+  padding: 0.75rem 0.9rem;
+  background: var(--body-bg);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 0.74rem;
+  line-height: 1.55;
+  color: var(--ink);
+  /* A LAS data section is wide and must not stretch the page; let the block
+     scroll on its own instead. */
+  overflow-x: auto;
+  max-height: 420px;
+  overflow-y: auto;
+  white-space: pre;
+}

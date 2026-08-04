@@ -86,6 +86,44 @@
   color: var(--sb-ink);
 }
 
+/* ── Workspace switcher ─────────────────────────────────────── */
+/* Sits above the scrollable body so it stays reachable no matter how long the
+   active workspace's control panel gets. */
+.workspaceNav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.5rem 0.4rem;
+  border-bottom: 1px solid var(--sb-line);
+  flex-shrink: 0;
+}
+
+.workspaceLink {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  border-radius: 7px;
+  color: var(--sb-muted);
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  overflow: hidden;
+  transition: background 130ms, color 130ms;
+}
+
+.workspaceLink:hover {
+  background: var(--sb-hover);
+  color: var(--sb-ink);
+}
+
+.workspaceLinkActive {
+  background: var(--sb-active);
+  color: var(--sb-ink);
+  box-shadow: inset 2px 0 0 #5cc4e8;
+}
+
 /* ── Scrollable body ────────────────────────────────────────── */
 .sbBody {
   flex: 1;

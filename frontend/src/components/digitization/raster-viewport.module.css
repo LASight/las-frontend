@@ -1,0 +1,156 @@
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-height: 0;
+}
+
+/* ── Toolbar ─────────────────────────────────────────────────── */
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.1rem;
+  flex-wrap: wrap;
+  padding: 0.45rem 0.7rem;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.depthRange {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: var(--ink);
+  flex-shrink: 0;
+}
+
+.zoomControls {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-shrink: 0;
+  flex-wrap: nowrap;
+}
+
+.zoomControls button {
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+  display: grid;
+  place-items: center;
+  font-family: inherit;
+}
+
+.zoomActionButton {
+  width: auto;
+  min-width: 96px;
+  height: auto;
+  min-height: 28px;
+  padding: 0 0.7rem;
+  white-space: nowrap;
+  font-size: 0.82rem;
+  flex-shrink: 0;
+}
+
+.zoomControls button:hover:not(:disabled) {
+  background: var(--body-bg);
+}
+
+.zoomControls button:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.zoomLabel {
+  min-width: 34px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.readout {
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  flex-shrink: 0;
+}
+
+/* ── Canvas ──────────────────────────────────────────────────── */
+.canvasRow {
+  display: flex;
+  gap: 0.5rem;
+  min-height: 0;
+}
+
+.canvasHost {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  /* A fixed height rather than an aspect ratio: the viewport shows a depth
+     window, so its height is how much log you can see at once, not a function
+     of the image's dimensions. */
+  height: 62vh;
+  min-height: 320px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--surface);
+}
+
+.canvas {
+  display: block;
+  touch-action: none; /* pointer drags are edits or pans, not page scrolls */
+  /* The cursor is set inline: it depends on the active tool *and* on whether a
+     pan is in progress, which CSS cannot see. */
+}
+
+.loading,
+.tileError {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid var(--line);
+  color: var(--muted);
+}
+
+.tileError {
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
+/* ── Value axis labels ───────────────────────────────────────── */
+.axisLabels {
+  position: relative;
+  height: 1.1rem;
+  /* The minimap's width plus .canvasRow's gap, so the value ticks line up with
+     the canvas rather than with the whole row. Keep these in step: the labels
+     silently drift off the curve if the minimap is ever resized. */
+  margin-right: calc(76px + 0.5rem);
+  font-size: 0.7rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.axisLabel {
+  position: absolute;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+  .canvasHost {
+    height: 50vh;
+  }
+}

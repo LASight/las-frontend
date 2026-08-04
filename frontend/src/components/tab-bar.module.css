@@ -17,6 +17,11 @@
   cursor: pointer;
   transition: color 150ms, border-color 150ms;
   font-family: inherit;
+  /* The tabs are anchors now that they are routes; these keep them looking
+     exactly like the buttons they replaced. */
+  text-decoration: none;
+  display: inline-block;
+  line-height: normal;
 }
 
 .tab:hover {

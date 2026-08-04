@@ -1,0 +1,89 @@
+.stepper {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  flex-wrap: wrap;
+}
+
+.step {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 130px;
+}
+
+/* Connector between steps, drawn on the step itself so it never outlives the
+   list on a wrap. */
+.step:not(:last-child)::after {
+  content: "";
+  flex: 1;
+  height: 2px;
+  background: var(--line);
+  margin: 0 0.35rem;
+}
+
+.stepBody {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.35rem 0.5rem;
+  border-radius: 7px;
+  text-decoration: none;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--muted);
+  white-space: nowrap;
+  transition: background 130ms, color 130ms;
+}
+
+a.stepBody:hover {
+  background: var(--body-bg);
+  color: var(--ink);
+}
+
+.marker {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 0.72rem;
+  border: 2px solid var(--line-strong);
+  background: var(--surface);
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+/* ── States ──────────────────────────────────────────────────── */
+.done .marker {
+  background: var(--accent-green);
+  border-color: var(--accent-green);
+  color: #ffffff;
+}
+
+.done .stepBody {
+  color: var(--ink);
+}
+
+.current .marker {
+  background: var(--accent-teal);
+  border-color: var(--accent-teal);
+  color: #ffffff;
+}
+
+.current .stepBody {
+  color: var(--ink);
+}
+
+.available .marker {
+  border-color: var(--accent-teal);
+  color: var(--accent-teal);
+}
+
+.locked .stepBody {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
