@@ -1,5 +1,11 @@
 /* Shared layout for the wizard steps. One stylesheet rather than six near-copies:
-   the steps differ in content, not in shape. */
+   the steps differ in content, not in shape.
+
+   The form primitives now live in `components/form/field.module.css` and are
+   composed in below, because the account and sign-in pages need the same
+   inputs. Composition rather than a copy: these class names stay valid, the six
+   steps import nothing new, and there is one definition of what an input looks
+   like. */
 
 .intro {
   margin: 0 0 0.9rem;
@@ -18,134 +24,61 @@
 }
 
 .error {
-  margin: 0.6rem 0 0;
-  padding: 0.55rem 0.7rem;
-  border-radius: 7px;
-  border: 1px solid var(--danger);
-  background: rgba(255, 110, 116, 0.08);
-  color: var(--danger);
-  font-size: 0.8rem;
-  line-height: 1.5;
+  composes: error from "../../form/field.module.css";
 }
 
 .notice {
-  margin: 0.6rem 0 0;
-  padding: 0.55rem 0.7rem;
-  border-radius: 7px;
-  border: 1px solid var(--warn);
-  background: rgba(240, 192, 97, 0.1);
-  color: #8a6414;
-  font-size: 0.8rem;
-  line-height: 1.5;
+  composes: notice from "../../form/field.module.css";
 }
 
 /* ── Field grid ──────────────────────────────────────────────── */
 .fieldGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-  gap: 0.75rem 1rem;
+  composes: fieldGrid from "../../form/field.module.css";
 }
 
 .field {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
+  composes: field from "../../form/field.module.css";
 }
 
 .label {
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: var(--muted);
+  composes: label from "../../form/field.module.css";
 }
 
-.input,
+.input {
+  composes: input from "../../form/field.module.css";
+}
+
 .select {
-  padding: 0.42rem 0.55rem;
-  border: 1px solid var(--line-strong);
-  border-radius: 7px;
-  background: var(--surface);
-  color: var(--ink);
-  font-size: 0.85rem;
-  font-family: inherit;
-  width: 100%;
-}
-
-.input:focus,
-.select:focus {
-  outline: 2px solid var(--accent-teal);
-  outline-offset: -1px;
+  composes: select from "../../form/field.module.css";
 }
 
 .inputInvalid {
-  border-color: var(--danger);
+  composes: inputInvalid from "../../form/field.module.css";
 }
 
 .fieldError {
-  font-size: 0.72rem;
-  color: var(--danger);
+  composes: fieldError from "../../form/field.module.css";
 }
 
 .checkRow {
-  display: flex;
-  align-items: center;
-  gap: 0.45rem;
-  font-size: 0.83rem;
-  color: var(--ink);
-  cursor: pointer;
+  composes: checkRow from "../../form/field.module.css";
 }
 
 /* ── Actions ─────────────────────────────────────────────────── */
 .actions {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  flex-wrap: wrap;
-  margin-top: 1rem;
-  padding-top: 0.85rem;
-  border-top: 1px solid var(--line);
+  composes: actions from "../../form/field.module.css";
 }
 
 .spacer {
-  flex: 1;
-}
-
-.primaryBtn,
-.secondaryBtn {
-  padding: 0.5rem 1rem;
-  border-radius: 7px;
-  font-size: 0.85rem;
-  font-weight: 600;
-  font-family: inherit;
-  cursor: pointer;
-  border: 1px solid transparent;
-  transition: background 130ms, border-color 130ms;
+  composes: spacer from "../../form/field.module.css";
 }
 
 .primaryBtn {
-  background: var(--accent-teal);
-  color: #06222b;
-}
-
-.primaryBtn:hover:not(:disabled) {
-  background: var(--accent-teal-2);
+  composes: primaryBtn from "../../form/field.module.css";
 }
 
 .secondaryBtn {
-  background: var(--surface);
-  border-color: var(--line-strong);
-  color: var(--ink);
-}
-
-.secondaryBtn:hover:not(:disabled) {
-  background: var(--body-bg);
-}
-
-.primaryBtn:disabled,
-.secondaryBtn:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
+  composes: secondaryBtn from "../../form/field.module.css";
 }
 
 /* ── Summary rows ────────────────────────────────────────────── */

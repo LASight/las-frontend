@@ -318,6 +318,111 @@
 }
 
 /* ── Status area ────────────────────────────────────────────── */
+/* ── Account block ──────────────────────────────────────────── */
+/* Chrome rather than a workspace: present on every page, so it lives with the
+   status line at the foot instead of in the switcher at the top. */
+.account {
+  padding: 0.4rem;
+  border-top: 1px solid var(--sb-line);
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.accountLink {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 0.5rem;
+  border-radius: 7px;
+  text-decoration: none;
+  color: var(--sb-ink);
+  overflow: hidden;
+  transition: background 130ms;
+}
+
+.accountLink:hover {
+  background: var(--sb-hover);
+}
+
+.accountLinkActive {
+  background: var(--sb-active);
+  box-shadow: inset 2px 0 0 #5cc4e8;
+}
+
+/* The initial is the only part of the account block that still reads at the
+   collapsed width, which is why it is a letter and not an icon. */
+.avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #06222b;
+  background: linear-gradient(135deg, var(--accent-teal), var(--accent-teal-2));
+}
+
+.accountText {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+  transition: opacity var(--sidebar-t), max-width var(--sidebar-t);
+  max-width: 180px;
+}
+
+.collapsed .accountText {
+  max-width: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.accountName {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--sb-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.accountEmail {
+  font-size: 0.68rem;
+  color: var(--sb-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.signOutBtn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.42rem 0.5rem;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--sb-muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  transition: background 130ms, color 130ms;
+}
+
+.signOutBtn:hover {
+  background: var(--sb-hover);
+  color: var(--danger);
+}
+
 .sbStatus {
   padding: 0.65rem 0.75rem;
   border-top: 1px solid var(--sb-line);
