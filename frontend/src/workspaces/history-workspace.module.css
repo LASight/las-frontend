@@ -1,0 +1,172 @@
+/* "My Files" — the list of everything this account has worked on. */
+
+.filters {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.chip {
+  padding: 0.3rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 130ms, border-color 130ms, color 130ms;
+}
+
+.chip:hover {
+  border-color: var(--accent-teal);
+  color: var(--ink);
+}
+
+.chipActive {
+  background: var(--accent-teal);
+  border-color: var(--accent-teal);
+  color: #06222b;
+}
+
+/* ── The list ────────────────────────────────────────────────── */
+/* A list of rows rather than a <table>: each row is a link to somewhere, and a
+   table of links is harder to make keyboard-navigable than a list of them. */
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--surface);
+  transition: border-color 130ms, box-shadow 130ms;
+}
+
+.row:hover {
+  border-color: var(--line-strong);
+  box-shadow: 0 2px 10px rgba(30, 37, 51, 0.05);
+}
+
+.icon {
+  font-size: 1.2rem;
+  flex: 0 0 auto;
+  line-height: 1;
+}
+
+.main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--ink);
+  text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.label:hover {
+  color: var(--accent-teal);
+}
+
+/* Not a link: a scan that was never analyzed has nothing to open. Styled as
+   plain text so it does not promise a destination it does not have. */
+.labelInert {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.meta {
+  font-size: 0.74rem;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+
+.dot::before {
+  content: "·";
+  margin-right: 0.45rem;
+}
+
+.badge {
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  background: var(--body-bg);
+  border: 1px solid var(--line);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.badgeFailed {
+  border-color: var(--danger);
+  color: var(--danger);
+  background: rgba(255, 110, 116, 0.08);
+}
+
+.badgeDone {
+  border-color: var(--ok);
+  color: #1c7a56;
+  background: rgba(89, 211, 158, 0.1);
+}
+
+.deleteBtn {
+  flex: 0 0 auto;
+  padding: 0.3rem 0.55rem;
+  border-radius: 7px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 130ms, color 130ms, border-color 130ms;
+}
+
+.deleteBtn:hover:not(:disabled) {
+  border-color: var(--danger);
+  color: var(--danger);
+  background: rgba(255, 110, 116, 0.06);
+}
+
+.deleteBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* ── Pagination ──────────────────────────────────────────────── */
+.pager {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: 0.9rem;
+  padding-top: 0.8rem;
+  border-top: 1px solid var(--line);
+  font-size: 0.78rem;
+  color: var(--muted);
+}

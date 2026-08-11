@@ -13,6 +13,7 @@ import type {
 } from "../models/digitization-models";
 import { API_BASE, apiRequest, apiRequestVoid, postJson } from "./http-client";
 import { MockDigitizationGateway } from "./digitization-mock-gateway";
+import { getAccessToken, getMediaToken } from "./token-store";
 
 /**
  * Everything the digitization workspace needs from a backend.
@@ -28,7 +29,10 @@ import { MockDigitizationGateway } from "./digitization-mock-gateway";
  * `tileUrl` returns a URL rather than a Blob on purpose: the review canvas
  * loads tiles through `Image`/`createImageBitmap` so the browser's HTTP cache
  * does the caching, which matters when scrolling a 127,000-px log revisits the
- * same windows constantly.
+ * same windows constantly. That is also why the tile URL carries a `t`
+ * credential in its query string — an `Image` cannot send an `Authorization`
+ * header, so this one endpoint accepts a short-lived, read-only media token
+ * instead.
  */
 export interface DigitizationGateway {
   health(): Promise<DigitizationHealth>;
@@ -169,8 +173,26 @@ export class HttpDigitizationGateway implements DigitizationGateway {
     if (options.scaleX !== undefined) params.set("scale_x", options.scaleX.toFixed(4));
     if (options.scaleY !== undefined) params.set("scale_y", options.scaleY.toFixed(4));
     if (options.layer) params.set("layer", options.layer);
+
+    // The credential goes last so it does not disturb the readability of a URL
+    // that gets read a lot in the network tab while debugging tiling.
+    const media = getMediaToken();
+    if (media) params.set("t", media);
+
     return `${API_BASE}${BASE}/jobs/${jobId}/tile?${params.toString()}`;
   }
+}
+
+/**
+ * A tile URL is only usable while its media token is.
+ *
+ * The token outlives fifteen minutes of scrolling but not an afternoon with the
+ * tab open, and a stale one makes every tile 404 with no visible cause. The
+ * viewport hooks key their caches on this so a refreshed session re-mints its
+ * URLs rather than redrawing from dead ones.
+ */
+export function tileCredentialKey(): string {
+  return getMediaToken() ?? getAccessToken() ?? "anonymous";
 }
 
 /**

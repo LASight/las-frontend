@@ -1,0 +1,156 @@
+/* Form primitives, shared by every page with inputs on it.
+ *
+ * These started life in `digitization/steps/step-layout.module.css`, which was
+ * the only place with a form. The account and sign-in pages need identical
+ * fields, and a second copy of the same six rules is how two forms end up
+ * looking almost the same. `step-layout.module.css` now composes from here, so
+ * the wizard renders byte-for-byte as before and there is one definition of
+ * what an input looks like. */
+
+.fieldGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 0.75rem 1rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.input,
+.select {
+  padding: 0.42rem 0.55rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 0.85rem;
+  font-family: inherit;
+  width: 100%;
+}
+
+.input:focus,
+.select:focus {
+  outline: 2px solid var(--accent-teal);
+  outline-offset: -1px;
+}
+
+.inputInvalid {
+  border-color: var(--danger);
+}
+
+.fieldError {
+  font-size: 0.72rem;
+  color: var(--danger);
+}
+
+.hint {
+  font-size: 0.72rem;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.checkRow {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.83rem;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+/* ── Actions ─────────────────────────────────────────────────── */
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--line);
+}
+
+.spacer {
+  flex: 1;
+}
+
+.primaryBtn,
+.secondaryBtn {
+  padding: 0.5rem 1rem;
+  border-radius: 7px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: background 130ms, border-color 130ms;
+}
+
+.primaryBtn {
+  background: var(--accent-teal);
+  color: #06222b;
+}
+
+.primaryBtn:hover:not(:disabled) {
+  background: var(--accent-teal-2);
+}
+
+.secondaryBtn {
+  background: var(--surface);
+  border-color: var(--line-strong);
+  color: var(--ink);
+}
+
+.secondaryBtn:hover:not(:disabled) {
+  background: var(--body-bg);
+}
+
+.primaryBtn:disabled,
+.secondaryBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* ── Feedback ────────────────────────────────────────────────── */
+.error {
+  margin: 0.6rem 0 0;
+  padding: 0.55rem 0.7rem;
+  border-radius: 7px;
+  border: 1px solid var(--danger);
+  background: rgba(255, 110, 116, 0.08);
+  color: var(--danger);
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+.notice {
+  margin: 0.6rem 0 0;
+  padding: 0.55rem 0.7rem;
+  border-radius: 7px;
+  border: 1px solid var(--warn);
+  background: rgba(240, 192, 97, 0.1);
+  color: #8a6414;
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+.success {
+  margin: 0.6rem 0 0;
+  padding: 0.55rem 0.7rem;
+  border-radius: 7px;
+  border: 1px solid var(--ok);
+  background: rgba(89, 211, 158, 0.1);
+  color: #1c7a56;
+  font-size: 0.8rem;
+  line-height: 1.5;
+}

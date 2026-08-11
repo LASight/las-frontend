@@ -1,6 +1,9 @@
 import { Navigate, createBrowserRouter } from "react-router-dom";
 
 import { AppShell } from "./app-shell";
+import { LoginPage } from "./components/auth/login-page";
+import { RequireAuth } from "./components/auth/require-auth";
+import { SignupPage } from "./components/auth/signup-page";
 import { RequireJobPhase } from "./components/digitization/require-job-phase";
 import { CalibrationStep } from "./components/digitization/steps/calibration-step";
 import { CropStep } from "./components/digitization/steps/crop-step";
@@ -8,8 +11,10 @@ import { ExportStep } from "./components/digitization/steps/export-step";
 import { IntakeStep } from "./components/digitization/steps/intake-step";
 import { ReviewStep } from "./components/digitization/steps/review-step";
 import { SegmentationStep } from "./components/digitization/steps/segmentation-step";
+import { AccountWorkspace } from "./workspaces/account-workspace";
 import { AnalysisWorkspace } from "./workspaces/analysis-workspace";
 import { DigitizationWorkspace } from "./workspaces/digitization-workspace";
+import { HistoryWorkspace } from "./workspaces/history-workspace";
 
 /**
  * Route table.
@@ -23,16 +28,31 @@ import { DigitizationWorkspace } from "./workspaces/digitization-workspace";
  * That only works because the job itself lives on the server: the route carries
  * a `jobId`, and {@link DigitizationWorkspace} rehydrates everything else from
  * `GET /jobs/{id}`.
+ *
+ * `/login` and `/signup` are siblings of the shell rather than children of it.
+ * There is no workspace to switch to and no status to report before signing in,
+ * so rendering the sidebar around a login form would offer navigation that
+ * cannot go anywhere. Everything else sits behind {@link RequireAuth}, which is
+ * what makes a deep link into a job survive a sign-in.
  */
 export const router = createBrowserRouter([
+  { path: "/login", element: <LoginPage /> },
+  { path: "/signup", element: <SignupPage /> },
   {
     path: "/",
-    element: <AppShell />,
+    element: (
+      <RequireAuth>
+        <AppShell />
+      </RequireAuth>
+    ),
     children: [
       { index: true, element: <Navigate to="/analysis" replace /> },
 
       { path: "analysis", element: <AnalysisWorkspace /> },
       { path: "analysis/sequence", element: <AnalysisWorkspace /> },
+
+      { path: "history", element: <HistoryWorkspace /> },
+      { path: "account", element: <AccountWorkspace /> },
 
       { path: "digitize", element: <Navigate to="/digitize/new" replace /> },
       { path: "digitize/new", element: <IntakeStep /> },

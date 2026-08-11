@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 
+import { useAuth } from "../auth-context";
 import styles from "./sidebar.module.css";
 
 /**
@@ -13,6 +14,11 @@ import styles from "./sidebar.module.css";
  * to edit. Now it owns layout and navigation only, and each workspace passes
  * its controls as `children` — so a third workspace adds a panel and a route
  * and changes nothing here.
+ *
+ * "My Files" is the proof of that: it is one entry in {@link WORKSPACES} and a
+ * route, and nothing else in this file changed for it. The account block at the
+ * foot is not a workspace — it is chrome, present on every page, which is why
+ * it sits beside the status line rather than in the switcher.
  */
 
 /** One entry in the workspace switcher. */
@@ -25,6 +31,7 @@ type Workspace = {
 const WORKSPACES: Workspace[] = [
   { to: "/analysis", icon: "📊", label: "LAS Analysis" },
   { to: "/digitize", icon: "🖼", label: "Digitize Raster" },
+  { to: "/history", icon: "🗂", label: "My Files" },
 ];
 
 type SidebarProps = {
@@ -44,6 +51,17 @@ export function Sidebar({
   isBusy,
   children,
 }: SidebarProps) {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+
+  async function handleSignOut() {
+    await logout();
+    // An explicit navigation rather than relying on the guard: the guard would
+    // send them to /login with a `from` pointing at wherever they signed out,
+    // and signing back in would silently reopen it.
+    navigate("/login", { replace: true });
+  }
+
   return (
     <nav className={`${styles.sidebar} ${collapsed ? styles.collapsed : ""}`}>
       <div className={styles.sbTop}>
@@ -77,6 +95,40 @@ export function Sidebar({
       </div>
 
       <div className={styles.sbBody}>{children}</div>
+
+      {user && (
+        <div className={styles.account}>
+          <NavLink
+            to="/account"
+            className={({ isActive }) =>
+              `${styles.accountLink} ${isActive ? styles.accountLinkActive : ""}`
+            }
+            title={collapsed ? user.email : "Account settings"}
+          >
+            {/* The initial is the only thing that still reads when the sidebar
+                is 52px wide, which is why it is not just an icon. */}
+            <span className={styles.avatar} aria-hidden="true">
+              {(user.full_name || user.email).charAt(0).toUpperCase()}
+            </span>
+            <span className={styles.accountText}>
+              <span className={styles.accountName}>
+                {user.full_name || user.email}
+              </span>
+              <span className={styles.accountEmail}>{user.email}</span>
+            </span>
+          </NavLink>
+
+          <button
+            type="button"
+            className={styles.signOutBtn}
+            onClick={handleSignOut}
+            title="Sign out"
+          >
+            <span className={styles.sbBtnIcon}>⏻</span>
+            <span className={styles.sbBtnLabel}>Sign out</span>
+          </button>
+        </div>
+      )}
 
       <div className={styles.sbStatus}>
         {!collapsed && status && <p className={styles.statusText}>{status}</p>}

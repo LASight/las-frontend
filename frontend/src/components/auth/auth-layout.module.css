@@ -1,0 +1,123 @@
+/* The signed-out frame: one centred card on the app background.
+ *
+ * Deliberately outside `app.module.css`'s sidebar layout. There is no workspace
+ * to switch to and no status to report before signing in, and rendering the
+ * chrome around a login form would offer navigation that cannot go anywhere. */
+
+.page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1rem;
+  background: var(--body-bg);
+}
+
+.card {
+  width: 100%;
+  max-width: 420px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 1.75rem;
+  box-shadow: 0 12px 32px rgba(30, 37, 51, 0.08);
+}
+
+/* ── Brand ───────────────────────────────────────────────────── */
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 1.35rem;
+}
+
+/* Same mark as the sidebar's, so the page a user meets first is recognisably
+   the same product as the one behind it. */
+.logoMark {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  font-size: 1rem;
+  color: #06222b;
+  background: linear-gradient(135deg, var(--accent-teal), var(--accent-teal-2));
+}
+
+.appName {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 0.3rem;
+}
+
+.subtitle {
+  margin: 0 0 1.25rem;
+  font-size: 0.83rem;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+/* ── Form ────────────────────────────────────────────────────── */
+.form {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.submit {
+  width: 100%;
+  margin-top: 0.35rem;
+  padding: 0.6rem 1rem;
+  border-radius: 7px;
+  border: 1px solid transparent;
+  background: var(--accent-teal);
+  color: #06222b;
+  font-size: 0.9rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 130ms;
+}
+
+.submit:hover:not(:disabled) {
+  background: var(--accent-teal-2);
+}
+
+.submit:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.switch {
+  margin: 1.15rem 0 0;
+  padding-top: 1rem;
+  border-top: 1px solid var(--line);
+  font-size: 0.82rem;
+  color: var(--muted);
+  text-align: center;
+}
+
+.switchLink {
+  color: var(--accent-teal);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.switchLink:hover {
+  text-decoration: underline;
+}
+
+/* Shown while the stored session is being exchanged for a live one. Not a
+   spinner: the exchange is one request and a flash of a loading state is more
+   distracting than an empty frame. */
+.restoring {
+  min-height: 100vh;
+  background: var(--body-bg);
+}

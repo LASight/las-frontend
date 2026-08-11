@@ -5,7 +5,19 @@
  * otherwise have been copied into the digitization service — two request
  * helpers drifting apart on error handling being exactly the kind of
  * duplication that bites later.
+ *
+ * It now also carries the session. Every request picks up the access token and
+ * a 401 transparently refreshes and retries once, so no caller had to change
+ * when authentication arrived: `analyzeSamples()` still reads as one line, and
+ * there is no `if (token)` scattered through fifteen service functions.
  */
+
+import {
+  clearSession,
+  getAccessToken,
+  getRefreshToken,
+  setSession,
+} from "./token-store";
 
 export const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000";
 
@@ -31,6 +43,11 @@ export class ApiError extends Error {
 
   get isNotFound(): boolean {
     return this.status === 404;
+  }
+
+  /** 401 — no session, or one that could not be refreshed. */
+  get isUnauthorized(): boolean {
+    return this.status === 401;
   }
 }
 
@@ -61,8 +78,74 @@ async function errorMessage(response: Response): Promise<string> {
   return `Request failed (${response.status})`;
 }
 
+/** Attach the bearer token without disturbing headers the caller set. */
+function withAuth(init: RequestInit): RequestInit {
+  const token = getAccessToken();
+  if (!token) return init;
+
+  const headers = new Headers(init.headers);
+  headers.set("Authorization", `Bearer ${token}`);
+  return { ...init, headers };
+}
+
+/**
+ * The in-flight refresh, if there is one.
+ *
+ * A page load fires several requests at once — the analysis payload, the job,
+ * the digitization health probe. When the access token has expired they all
+ * 401 together, and without this each would refresh independently. That is not
+ * merely wasteful: the backend *rotates* refresh tokens, so the second refresh
+ * would present one the first had already revoked and the user would be signed
+ * out by their own concurrency.
+ */
+let refreshInFlight: Promise<boolean> | null = null;
+
+async function refreshSession(): Promise<boolean> {
+  const refreshToken = getRefreshToken();
+  if (!refreshToken) return false;
+
+  // Deliberately a bare `fetch`, not `apiRequest`: routing the refresh through
+  // the same helper that triggers refreshes is how you write an infinite loop.
+  const response = await fetch(`${API_BASE}/api/auth/refresh`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ refresh_token: refreshToken }),
+  });
+
+  if (!response.ok) {
+    clearSession();
+    return false;
+  }
+
+  setSession(await response.json());
+  return true;
+}
+
+/** Refresh at most once concurrently, and let every waiter share the result. */
+function refreshOnce(): Promise<boolean> {
+  refreshInFlight ??= refreshSession()
+    .catch(() => {
+      clearSession();
+      return false;
+    })
+    .finally(() => {
+      refreshInFlight = null;
+    });
+  return refreshInFlight;
+}
+
 async function send(path: string, init: RequestInit): Promise<Response> {
-  const response = await fetch(`${API_BASE}${path}`, init);
+  let response = await fetch(`${API_BASE}${path}`, withAuth(init));
+
+  // One retry, and only for 401. A second 401 after a successful refresh means
+  // the account genuinely cannot do this, and retrying again would just be a
+  // slower way to show the same error.
+  if (response.status === 401 && !path.startsWith("/api/auth/")) {
+    if (await refreshOnce()) {
+      response = await fetch(`${API_BASE}${path}`, withAuth(init));
+    }
+  }
+
   if (!response.ok) {
     throw new ApiError(response.status, await errorMessage(response));
   }
@@ -91,6 +174,15 @@ export async function apiRequestBlob(
 export function postJson<T>(path: string, body: unknown): Promise<T> {
   return apiRequest<T>(path, {
     method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
+/** PATCH a JSON body. */
+export function patchJson<T>(path: string, body: unknown): Promise<T> {
+  return apiRequest<T>(path, {
+    method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
