@@ -1,4 +1,15 @@
 import type { ReactNode } from "react";
+import {
+  ChartNoAxesCombined,
+  ChevronLeft,
+  ChevronRight,
+  FileChartColumn,
+  Files,
+  FolderClock,
+  LoaderCircle,
+  LogOut,
+  ScanLine,
+} from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 
 import { useAuth } from "../auth-context";
@@ -15,7 +26,7 @@ import styles from "./sidebar.module.css";
  * its controls as `children` — so a third workspace adds a panel and a route
  * and changes nothing here.
  *
- * "My Files" is the proof of that: it is one entry in {@link WORKSPACES} and a
+ * "My Files" is the proof of that: it is one entry in the workspace groups and a
  * route, and nothing else in this file changed for it. The account block at the
  * foot is not a workspace — it is chrome, present on every page, which is why
  * it sits beside the status line rather than in the switcher.
@@ -24,14 +35,28 @@ import styles from "./sidebar.module.css";
 /** One entry in the workspace switcher. */
 type Workspace = {
   to: string;
-  icon: string;
+  icon: typeof FileChartColumn;
   label: string;
 };
 
-const WORKSPACES: Workspace[] = [
-  { to: "/analysis", icon: "📊", label: "LAS Analysis" },
-  { to: "/digitize", icon: "🖼", label: "Digitize Raster" },
-  { to: "/history", icon: "🗂", label: "My Files" },
+const WORKSPACE_GROUPS: Array<{ label: string; items: Workspace[] }> = [
+  {
+    label: "SINGLE WELL",
+    items: [
+      { to: "/analysis", icon: FileChartColumn, label: "LAS Analysis" },
+      { to: "/digitize", icon: ScanLine, label: "Digitize Raster" },
+    ],
+  },
+  {
+    label: "MULTI-WELL",
+    items: [
+      { to: "/portfolio", icon: ChartNoAxesCombined, label: "Portfolio Analytics" },
+    ],
+  },
+  {
+    label: "LIBRARY",
+    items: [{ to: "/history", icon: FolderClock, label: "My Files" }],
+  },
 ];
 
 type SidebarProps = {
@@ -74,23 +99,28 @@ export function Sidebar({
           onClick={onCollapseToggle}
           title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
-          {collapsed ? "›" : "‹"}
+          {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
         </button>
       </div>
 
       <div className={styles.workspaceNav}>
-        {WORKSPACES.map((workspace) => (
-          <NavLink
-            key={workspace.to}
-            to={workspace.to}
-            className={({ isActive }) =>
-              `${styles.workspaceLink} ${isActive ? styles.workspaceLinkActive : ""}`
-            }
-            title={collapsed ? workspace.label : undefined}
-          >
-            <span className={styles.sbBtnIcon}>{workspace.icon}</span>
-            <span className={styles.sbBtnLabel}>{workspace.label}</span>
-          </NavLink>
+        {WORKSPACE_GROUPS.map((group) => (
+          <div className={styles.workspaceGroup} key={group.label}>
+            <span className={styles.workspaceGroupLabel}>{group.label}</span>
+            {group.items.map(({ to, icon: WorkspaceIcon, label }) => (
+              <NavLink
+                key={to}
+                to={to}
+                className={({ isActive }) =>
+                  `${styles.workspaceLink} ${isActive ? styles.workspaceLinkActive : ""}`
+                }
+                title={collapsed ? label : undefined}
+              >
+                <span className={styles.sbBtnIcon}><WorkspaceIcon size={17} /></span>
+                <span className={styles.sbBtnLabel}>{label}</span>
+              </NavLink>
+            ))}
+          </div>
         ))}
       </div>
 
@@ -124,7 +154,7 @@ export function Sidebar({
             onClick={handleSignOut}
             title="Sign out"
           >
-            <span className={styles.sbBtnIcon}>⏻</span>
+            <span className={styles.sbBtnIcon}><LogOut size={16} /></span>
             <span className={styles.sbBtnLabel}>Sign out</span>
           </button>
         </div>
@@ -134,7 +164,7 @@ export function Sidebar({
         {!collapsed && status && <p className={styles.statusText}>{status}</p>}
         {collapsed && (
           <span className={styles.sbBtnIcon} title={status || "Ready"}>
-            {isBusy ? "⟳" : "●"}
+            {isBusy ? <LoaderCircle size={16} className={styles.spinning} /> : <Files size={15} />}
           </span>
         )}
       </div>

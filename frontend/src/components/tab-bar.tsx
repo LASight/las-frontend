@@ -12,7 +12,7 @@ type Tab = {
 };
 
 const TABS: Tab[] = [
-  { to: "/analysis", label: "Overview", end: true },
+  { to: "/analysis", label: "Well Overview", end: true },
   { to: "/analysis/sequence", label: "Sequence Stratigraphy" },
 ];
 

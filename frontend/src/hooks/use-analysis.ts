@@ -12,10 +12,12 @@ import {
 import { useFileValidation } from "./use-file-validation";
 
 type Options = {
+  scope?: "single" | "portfolio";
   onNewAnalysis?: (payload: AnalyzePayload) => void;
 };
 
 export function useAnalysis(options: Options = {}) {
+  const scope = options.scope ?? "single";
   const [payload, setPayload] = useState<AnalyzePayload | null>(null);
   const [status, setStatus] = useState("Ready.");
   const [aiEnabled, setAiEnabled] = useState(true);
@@ -65,17 +67,35 @@ export function useAnalysis(options: Options = {}) {
     setAiLoading(false);
     setAiText("AI interpretation disabled by toggle.");
     setAiMeta("Source: heuristic | AI disabled");
-    setStatus(`Completed analysis for ${nextPayload.portfolio_summary?.well_count ?? 0} wells.`);
+    const wellCount = nextPayload.portfolio_summary?.well_count ?? nextPayload.wells?.length ?? 0;
+    setStatus(
+      scope === "portfolio"
+        ? `Completed portfolio analysis for ${wellCount} wells.`
+        : "Completed well analysis."
+    );
   }
 
   async function runSampleAnalysis() {
+    if (scope !== "portfolio") {
+      setStatus("Sample portfolios are available in Portfolio Analytics.");
+      return;
+    }
     const nextPayload = await sampleMutation.mutateAsync();
     await handlePostAnalyze(nextPayload);
   }
 
   async function runUploadAnalysis() {
-    if (!fileList || fileList.length === 0) {
-      setStatus("Select one or more LAS files first.");
+    const requiredFiles = scope === "portfolio" ? 2 : 1;
+    if (!fileList || fileList.length < requiredFiles) {
+      setStatus(
+        scope === "portfolio"
+          ? "Select at least two LAS files for portfolio analysis."
+          : "Select one LAS file first."
+      );
+      return;
+    }
+    if (scope === "single" && fileList.length !== 1) {
+      setStatus("LAS Analysis accepts one well at a time.");
       return;
     }
     fileValidation.reset();
@@ -92,7 +112,7 @@ export function useAnalysis(options: Options = {}) {
    * produced.
    */
   async function adoptAnalysis(analysisId: string) {
-    setStatus("Loading digitized well...");
+    setStatus(scope === "portfolio" ? "Loading saved portfolio..." : "Loading saved well...");
     try {
       await handlePostAnalyze(await fetchAnalysis(analysisId));
     } catch (err) {

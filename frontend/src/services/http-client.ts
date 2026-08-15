@@ -100,6 +100,17 @@ function withAuth(init: RequestInit): RequestInit {
  */
 let refreshInFlight: Promise<boolean> | null = null;
 
+const NON_REFRESHABLE_AUTH_PATHS = new Set([
+  "/api/auth/login",
+  "/api/auth/signup",
+  "/api/auth/refresh",
+  "/api/auth/logout",
+]);
+
+function canRefresh(path: string): boolean {
+  return !NON_REFRESHABLE_AUTH_PATHS.has(path);
+}
+
 async function refreshSession(): Promise<boolean> {
   const refreshToken = getRefreshToken();
   if (!refreshToken) return false;
@@ -140,7 +151,7 @@ async function send(path: string, init: RequestInit): Promise<Response> {
   // One retry, and only for 401. A second 401 after a successful refresh means
   // the account genuinely cannot do this, and retrying again would just be a
   // slower way to show the same error.
-  if (response.status === 401 && !path.startsWith("/api/auth/")) {
+  if (response.status === 401 && canRefresh(path)) {
     if (await refreshOnce()) {
       response = await fetch(`${API_BASE}${path}`, withAuth(init));
     }
@@ -160,6 +171,16 @@ export async function apiRequest<T>(path: string, init: RequestInit = {}): Promi
 /** Perform a request expecting no body, e.g. a 204. */
 export async function apiRequestVoid(path: string, init: RequestInit = {}): Promise<void> {
   await send(path, init);
+}
+
+/**
+ * Perform an authenticated request and expose its response metadata.
+ *
+ * Downloads need headers such as `Content-Disposition`, so parsing their body
+ * inside the shared client would discard information the caller needs.
+ */
+export function apiRequestResponse(path: string, init: RequestInit = {}): Promise<Response> {
+  return send(path, init);
 }
 
 /** Perform a request and return the raw body — used for PNG tiles and LAS text. */

@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { FileChartColumn, ScanLine } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 
@@ -58,7 +59,10 @@ function formatDate(iso: string): string {
  * answer, and the reason the row still shows what it was.
  */
 function destinationFor(item: HistoryItem): string | null {
-  if (item.kind === "las") return `/analysis?analysis=${item.item_id}`;
+  if (item.kind === "las") {
+    const workspace = item.file_count > 1 ? "portfolio" : "analysis";
+    return `/${workspace}?analysis=${item.item_id}`;
+  }
   if (item.analysis_id) return `/analysis?analysis=${item.analysis_id}`;
   return `/digitize/${item.item_id}`;
 }
@@ -150,7 +154,7 @@ export function HistoryWorkspace() {
               return (
                 <li key={`${item.kind}-${item.item_id}`} className={styles.row}>
                   <span className={styles.icon} aria-hidden="true">
-                    {item.kind === "las" ? "📊" : "🖼"}
+                    {item.kind === "las" ? <FileChartColumn size={19} /> : <ScanLine size={19} />}
                   </span>
 
                   <div className={styles.main}>

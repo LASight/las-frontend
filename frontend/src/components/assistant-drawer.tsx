@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
+import { HardHat, X } from "lucide-react";
 
 import type { ChatMessage } from "../hooks/use-chat";
 import { renderMarkdown } from "../services/markdown-service";
@@ -7,6 +8,7 @@ import styles from "./assistant-drawer.module.css";
 type DrawerTab = "chat" | "brief";
 
 type Props = {
+  scope: "single" | "portfolio";
   open: boolean;
   onToggle: () => void;
   analysisId: string | null;
@@ -21,20 +23,27 @@ type Props = {
   onWidthChange: (value: number) => void;
 };
 
-const QUICK_PROMPTS = [
+const PORTFOLIO_PROMPTS = [
   "Give me the top 3 technical risks across wells and why.",
   "Which well should we prioritize and what confirms it?",
   "Summarize sequence boundary confidence issues for the selected dataset.",
+];
+
+const WELL_PROMPTS = [
+  "Summarize the main technical risks in this well.",
+  "Which intervals should be reviewed first and why?",
+  "Explain the sequence boundary confidence issues in this well.",
 ];
 
 const MIN_WIDTH = 320;
 const MAX_WIDTH = 760;
 
 function HelmetIcon() {
-  return <span className={styles.helmet}>⛑</span>;
+  return <HardHat className={styles.helmet} size={17} />;
 }
 
 export function AssistantDrawer({
+  scope,
   open,
   onToggle,
   analysisId,
@@ -51,6 +60,7 @@ export function AssistantDrawer({
   const [tab, setTab] = useState<DrawerTab>("chat");
   const [draftInput, setDraftInput] = useState("");
   const isResizingRef = useRef(false);
+  const quickPrompts = scope === "portfolio" ? PORTFOLIO_PROMPTS : WELL_PROMPTS;
 
   useEffect(() => {
     function clampWidth(nextWidth: number): number {
@@ -148,8 +158,8 @@ export function AssistantDrawer({
             <span className={`${styles.dot} ${aiEnabled ? styles.dotOn : styles.dotOff}`}>
               {aiEnabled ? "AI on" : "AI off"}
             </span>
-            <button type="button" onClick={onToggle} className={styles.closeBtn}>
-              ×
+            <button type="button" onClick={onToggle} className={styles.closeBtn} aria-label="Close assistant">
+              <X size={16} />
             </button>
           </div>
         </div>
@@ -174,7 +184,7 @@ export function AssistantDrawer({
         {tab === "chat" ? (
           <>
             <div className={styles.promptRow}>
-              {QUICK_PROMPTS.map((prompt) => (
+              {quickPrompts.map((prompt) => (
                 <button
                   key={prompt}
                   type="button"
@@ -211,7 +221,11 @@ export function AssistantDrawer({
               rows={4}
               value={draftInput}
               onChange={(event) => setDraftInput(event.target.value)}
-              placeholder="Ask AI about ranking, risks, facies, sequence picks, or recommended actions..."
+              placeholder={
+                scope === "portfolio"
+                  ? "Ask about rankings, cross-well risks, facies or recommended actions..."
+                  : "Ask about this well's risks, intervals, curves or sequence picks..."
+              }
               onKeyDown={(event) => {
                 if (event.key === "Enter" && !event.shiftKey) {
                   event.preventDefault();

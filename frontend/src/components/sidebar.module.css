@@ -92,10 +92,32 @@
 .workspaceNav {
   display: flex;
   flex-direction: column;
-  gap: 0.15rem;
+  gap: 0.45rem;
   padding: 0.5rem 0.4rem;
   border-bottom: 1px solid var(--sb-line);
   flex-shrink: 0;
+}
+
+.workspaceGroup {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.workspaceGroupLabel {
+  padding: 0.2rem 0.55rem 0.05rem;
+  color: var(--sb-muted);
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  white-space: nowrap;
+  overflow: hidden;
+  transition: opacity var(--sidebar-t), max-height var(--sidebar-t);
+}
+
+.collapsed .workspaceGroupLabel {
+  max-height: 0;
+  padding-block: 0;
+  opacity: 0;
 }
 
 .workspaceLink {
@@ -195,6 +217,18 @@
   width: 22px;
   text-align: center;
   flex-shrink: 0;
+  display: grid;
+  place-items: center;
+}
+
+.spinning {
+  animation: sidebar-spin 900ms linear infinite;
+}
+
+@keyframes sidebar-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .sbBtnLabel {

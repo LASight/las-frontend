@@ -1,5 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
+import { ScanLine } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 import styles from "./step-layout.module.css";
@@ -88,7 +89,7 @@ export function IntakeStep() {
               handleFiles(event.dataTransfer.files);
             }}
           >
-            <span className={intakeStyles.dropIcon}>🖼</span>
+            <ScanLine className={intakeStyles.dropIcon} size={28} />
             <span className={intakeStyles.dropTitle}>
               {file ? file.name : "Drop a scan here, or click to choose"}
             </span>
