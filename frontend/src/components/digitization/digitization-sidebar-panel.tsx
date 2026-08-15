@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom";
+import { CircleAlert, Plus, ScanLine } from "lucide-react";
 
 import type { JobSummary } from "../../models/digitization-models";
 import { IS_MOCK_GATEWAY } from "../../services/digitization-service";
@@ -24,7 +25,7 @@ export function DigitizationSidebarPanel({ collapsed, job }: Props) {
 
   return (
     <>
-      <SbSection icon="🖼" label="RASTER" collapsed={collapsed}>
+      <SbSection icon={<ScanLine size={16} />} label="RASTER" collapsed={collapsed}>
         {!collapsed && (
           <div className={styles.meta}>
             {job ? (
@@ -56,7 +57,7 @@ export function DigitizationSidebarPanel({ collapsed, job }: Props) {
         )}
 
         <SbButton
-          icon="＋"
+          icon={<Plus size={16} />}
           label="New digitization"
           collapsed={collapsed}
           onClick={() => navigate("/digitize/new")}
@@ -67,7 +68,7 @@ export function DigitizationSidebarPanel({ collapsed, job }: Props) {
       {IS_MOCK_GATEWAY && (
         <>
           <SbDivider />
-          <SbSection icon="⚠" label="MOCK MODE" collapsed={collapsed}>
+          <SbSection icon={<CircleAlert size={16} />} label="MOCK MODE" collapsed={collapsed}>
             {!collapsed && (
               <p className={styles.warning}>
                 VITE_DIGITIZATION_MOCK is on. Curves are generated in the browser and

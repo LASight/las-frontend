@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { ChevronDown, ChevronRight, CircleAlert, CircleX, Info } from "lucide-react";
+import type { ReactNode } from "react";
 import type { FileValidationReport, FileValidationIssue, ValidationDecision } from "../models/analyze-models";
 import styles from "./file-validation-modal.module.css";
 
@@ -8,10 +10,10 @@ interface Props {
   onCancel: () => void;
 }
 
-function issueSeverityIcon(severity: FileValidationIssue["severity"]): string {
-  if (severity === "error") return "✕";
-  if (severity === "warn") return "⚠";
-  return "ℹ";
+function issueSeverityIcon(severity: FileValidationIssue["severity"]): ReactNode {
+  if (severity === "error") return <CircleX size={16} />;
+  if (severity === "warn") return <CircleAlert size={16} />;
+  return <Info size={16} />;
 }
 
 function issueClass(severity: FileValidationIssue["severity"]): string {
@@ -63,7 +65,9 @@ function FileCard({ report, decision, onChange }: FileCardProps) {
   return (
     <div className={styles.fileCard}>
       <div className={styles.fileCardHeader} onClick={() => setOpen((v) => !v)}>
-        <span className={`${styles.chevron} ${open ? styles.chevronOpen : ""}`}>▶</span>
+        <span className={styles.chevron}>
+          {open ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+        </span>
         <span className={styles.fileCardName}>{report.file_name}</span>
         <span className={`${styles.badge} ${badgeClass()}`}>{badgeLabel()}</span>
         <span className={styles.fileCardMeta}>
@@ -167,7 +171,7 @@ function FileCard({ report, decision, onChange }: FileCardProps) {
           {report.parsing_warnings.length > 0 && (
             <div>
               <button className={styles.warningsToggle} onClick={() => setShowWarnings((v) => !v)}>
-                {showWarnings ? "▾" : "▸"} {report.parsing_warnings.length} parser warning
+                {showWarnings ? <ChevronDown size={14} /> : <ChevronRight size={14} />} {report.parsing_warnings.length} parser warning
                 {report.parsing_warnings.length > 1 ? "s" : ""}
               </button>
               {showWarnings && (

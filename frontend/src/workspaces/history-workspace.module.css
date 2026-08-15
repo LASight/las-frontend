@@ -59,9 +59,10 @@
 }
 
 .icon {
-  font-size: 1.2rem;
   flex: 0 0 auto;
-  line-height: 1;
+  display: grid;
+  place-items: center;
+  color: var(--accent-teal);
 }
 
 .main {

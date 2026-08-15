@@ -1,4 +1,18 @@
 import {
+  Bot,
+  Download,
+  Eye,
+  FileDown,
+  FileSpreadsheet,
+  FileUp,
+  FlaskConical,
+  Gauge,
+  Play,
+  Settings,
+  Upload,
+} from "lucide-react";
+
+import {
   SbButton,
   SbDivider,
   SbFilePicker,
@@ -9,13 +23,13 @@ import {
 /**
  * The LAS analysis workspace's sidebar controls.
  *
- * Lifted verbatim out of `Sidebar` when the digitization workspace arrived —
- * same sections, same order, same behaviour. What changed is ownership: these
- * controls belong to the analysis workflow, so they live with it and travel
- * with it, instead of being hard-coded into shared chrome.
+ * Shared control surface for the single-well and portfolio workspaces. The
+ * scope changes file cardinality, labels and sample/demo actions while keeping
+ * export and AI controls consistent.
  */
 
 type Props = {
+  scope: "single" | "portfolio";
   collapsed: boolean;
   isBusy: boolean;
   aiEnabled: boolean;
@@ -33,6 +47,7 @@ type Props = {
 };
 
 export function AnalysisSidebarPanel({
+  scope,
   collapsed,
   isBusy,
   aiEnabled,
@@ -48,53 +63,63 @@ export function AnalysisSidebarPanel({
   onAiEnabledChange,
   onDemoModeChange,
 }: Props) {
+  const isPortfolio = scope === "portfolio";
+
   return (
     <>
-      <SbSection icon="▤" label="FILE & ANALYSIS" collapsed={collapsed}>
+      <SbSection
+        icon={isPortfolio ? <Gauge size={16} /> : <FileUp size={16} />}
+        label={isPortfolio ? "PORTFOLIO INPUT" : "WELL INPUT"}
+        collapsed={collapsed}
+      >
         <SbFilePicker
-          icon="📂"
-          label="Select LAS files…"
+          icon={<FileUp size={16} />}
+          label={isPortfolio ? "Select LAS files…" : "Select LAS file…"}
           collapsed={collapsed}
           accept=".las,.LAS"
-          multiple
+          multiple={isPortfolio}
           onChange={onFileChange}
         />
+        {isPortfolio && (
+          <SbButton
+            icon={<FlaskConical size={16} />}
+            label="Analyze Sample Portfolio"
+            collapsed={collapsed}
+            disabled={isBusy}
+            onClick={onAnalyzeSample}
+          />
+        )}
         <SbButton
-          icon="⚙"
-          label="Analyze Sample Folder"
-          collapsed={collapsed}
-          disabled={isBusy}
-          onClick={onAnalyzeSample}
-        />
-        <SbButton
-          icon="↑"
-          label="Analyze Uploaded Files"
+          icon={<Upload size={16} />}
+          label={isPortfolio ? "Analyze Portfolio" : "Analyze Well"}
           collapsed={collapsed}
           disabled={isBusy}
           onClick={onAnalyzeUploads}
           variant="primary"
         />
-        <SbButton
-          icon="▶"
-          label="Run Demo Mode"
-          collapsed={collapsed}
-          disabled={isBusy}
-          onClick={onRunDemo}
-        />
+        {isPortfolio && (
+          <SbButton
+            icon={<Play size={16} />}
+            label="Run Portfolio Demo"
+            collapsed={collapsed}
+            disabled={isBusy}
+            onClick={onRunDemo}
+          />
+        )}
       </SbSection>
 
       <SbDivider />
 
-      <SbSection icon="⬇" label="EXPORT" collapsed={collapsed}>
+      <SbSection icon={<Download size={16} />} label="EXPORT" collapsed={collapsed}>
         <SbButton
-          icon="📋"
+          icon={<FileSpreadsheet size={16} />}
           label="Export CSV"
           collapsed={collapsed}
           disabled={!hasPayload}
           onClick={onExportCsv}
         />
         <SbButton
-          icon="📄"
+          icon={<FileDown size={16} />}
           label="Export PDF"
           collapsed={collapsed}
           disabled={!hasPayload || exportingPdf}
@@ -104,21 +129,23 @@ export function AnalysisSidebarPanel({
 
       <SbDivider />
 
-      <SbSection icon="⚙" label="SETTINGS" collapsed={collapsed}>
+      <SbSection icon={<Settings size={16} />} label="SETTINGS" collapsed={collapsed}>
         <SbToggle
-          icon="✦"
+          icon={<Bot size={16} />}
           label="Enable AI"
           collapsed={collapsed}
           checked={aiEnabled}
           onChange={onAiEnabledChange}
         />
-        <SbToggle
-          icon="◎"
-          label="Demo visuals"
-          collapsed={collapsed}
-          checked={demoMode}
-          onChange={onDemoModeChange}
-        />
+        {isPortfolio && (
+          <SbToggle
+            icon={<Eye size={16} />}
+            label="Demo visuals"
+            collapsed={collapsed}
+            checked={demoMode}
+            onChange={onDemoModeChange}
+          />
+        )}
       </SbSection>
     </>
   );

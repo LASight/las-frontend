@@ -1,0 +1,112 @@
+.contextHeader {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1.25rem;
+  padding: 0.95rem 1.1rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.identity {
+  min-width: 0;
+}
+
+.eyebrow {
+  margin: 0 0 0.2rem;
+  color: var(--muted);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+}
+
+.wellName {
+  margin: 0;
+  color: var(--ink);
+  font-size: 1.15rem;
+  font-weight: 650;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.fileName {
+  margin: 0.25rem 0 0;
+  color: var(--muted);
+  font-size: 0.76rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.selector {
+  display: grid;
+  gap: 0.3rem;
+  width: min(420px, 46%);
+  min-width: 280px;
+}
+
+.label {
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 650;
+}
+
+.selectWrap {
+  position: relative;
+}
+
+.selectIcon,
+.chevron {
+  position: absolute;
+  top: 50%;
+  color: var(--muted);
+  pointer-events: none;
+  transform: translateY(-50%);
+}
+
+.selectIcon {
+  left: 0.65rem;
+}
+
+.chevron {
+  right: 0.65rem;
+}
+
+.select {
+  width: 100%;
+  height: 38px;
+  padding: 0 2.15rem 0 2.15rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  appearance: none;
+  background: var(--body-bg);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.8rem;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+.select:focus {
+  border-color: var(--accent-teal);
+  outline: 2px solid rgba(56, 185, 217, 0.15);
+  outline-offset: 1px;
+}
+
+.select:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+@media (max-width: 760px) {
+  .contextHeader {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .selector {
+    width: 100%;
+    min-width: 0;
+  }
+}

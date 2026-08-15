@@ -11,7 +11,13 @@ import type {
   TrackCalibration,
   TrackCrop,
 } from "../models/digitization-models";
-import { API_BASE, apiRequest, apiRequestVoid, postJson } from "./http-client";
+import {
+  API_BASE,
+  apiRequest,
+  apiRequestResponse,
+  apiRequestVoid,
+  postJson,
+} from "./http-client";
 import { MockDigitizationGateway } from "./digitization-mock-gateway";
 import { getAccessToken, getMediaToken } from "./token-store";
 
@@ -126,15 +132,11 @@ export class HttpDigitizationGateway implements DigitizationGateway {
     jobId: string,
     request: ExportRequest
   ): Promise<{ text: string; fileName: string }> {
-    const response = await fetch(`${API_BASE}${BASE}/jobs/${jobId}/export-las`, {
+    const response = await apiRequestResponse(`${BASE}/jobs/${jobId}/export-las`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(request),
     });
-    if (!response.ok) {
-      const body = await response.json().catch(() => null);
-      throw new Error(body?.detail || `Export failed (${response.status})`);
-    }
     return {
       text: await response.text(),
       fileName: fileNameFromDisposition(

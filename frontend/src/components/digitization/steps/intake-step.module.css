@@ -20,7 +20,7 @@
 }
 
 .dropIcon {
-  font-size: 1.7rem;
+  color: var(--accent-teal);
 }
 
 .dropTitle {

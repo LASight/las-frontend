@@ -15,6 +15,7 @@ import { AccountWorkspace } from "./workspaces/account-workspace";
 import { AnalysisWorkspace } from "./workspaces/analysis-workspace";
 import { DigitizationWorkspace } from "./workspaces/digitization-workspace";
 import { HistoryWorkspace } from "./workspaces/history-workspace";
+import { PortfolioWorkspace } from "./workspaces/portfolio-workspace";
 
 /**
  * Route table.
@@ -50,6 +51,7 @@ export const router = createBrowserRouter([
 
       { path: "analysis", element: <AnalysisWorkspace /> },
       { path: "analysis/sequence", element: <AnalysisWorkspace /> },
+      { path: "portfolio", element: <PortfolioWorkspace /> },
 
       { path: "history", element: <HistoryWorkspace /> },
       { path: "account", element: <AccountWorkspace /> },

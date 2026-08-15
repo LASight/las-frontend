@@ -19,7 +19,7 @@ import styles from "./sidebar.module.css";
  */
 
 type SbSectionProps = {
-  icon: string;
+  icon: ReactNode;
   label: string;
   collapsed: boolean;
   children: ReactNode;
@@ -38,7 +38,7 @@ export function SbSection({ icon, label, collapsed, children }: SbSectionProps) 
 }
 
 type SbButtonProps = {
-  icon: string;
+  icon: ReactNode;
   label: string;
   collapsed: boolean;
   disabled?: boolean;
@@ -70,7 +70,7 @@ export function SbButton({
 }
 
 type SbToggleProps = {
-  icon: string;
+  icon: ReactNode;
   label: string;
   collapsed: boolean;
   checked: boolean;
@@ -94,7 +94,7 @@ export function SbToggle({ icon, label, collapsed, checked, onChange }: SbToggle
 }
 
 type SbFilePickerProps = {
-  icon: string;
+  icon: ReactNode;
   label: string;
   collapsed: boolean;
   /** `accept` attribute — `.las` for analysis, image types for digitization. */

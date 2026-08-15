@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { HttpAuthGateway } from "./auth-service";
 import { ApiError, apiRequest } from "./http-client";
 import { clearSession, getAccessToken, getMediaToken, setSession } from "./token-store";
 
@@ -90,6 +91,37 @@ describe("http-client session handling", () => {
     expect(getMediaToken()).toBe("media-2");
   });
 
+  it("restores a persisted session after a page reload", async () => {
+    localStorage.setItem("wellsight.refresh_token", "refresh-1");
+    const user = {
+      user_id: "user-1",
+      email: "user@example.com",
+      full_name: "Test User",
+      organization: "WellSight",
+      role: "data_manager",
+      created_at: "2026-01-01T00:00:00Z",
+      last_login_at: "2026-01-02T00:00:00Z",
+    };
+    const fetchMock = vi
+      .fn()
+      // The first /me has no access token after a browser reload.
+      .mockResolvedValueOnce(jsonResponse({ detail: "Not authenticated" }, 401))
+      // The persisted refresh token restores and rotates the session.
+      .mockResolvedValueOnce(jsonResponse(tokens("2")))
+      // /me is retried with the new access token.
+      .mockResolvedValueOnce(jsonResponse(user));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(new HttpAuthGateway().restore()).resolves.toEqual(user);
+
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(fetchMock.mock.calls[1][0]).toBe(`${API_BASE}/api/auth/refresh`);
+    expect(new Headers(fetchMock.mock.calls[2][1].headers).get("Authorization")).toBe(
+      "Bearer access-2"
+    );
+    expect(localStorage.getItem("wellsight.refresh_token")).toBe("refresh-2");
+  });
+
   it("refreshes only once when several requests 401 together", async () => {
     setSession(tokens("1"));
 
@@ -138,7 +170,7 @@ describe("http-client session handling", () => {
     expect(localStorage.getItem("wellsight.refresh_token")).toBeNull();
   });
 
-  it("does not try to refresh the auth endpoints themselves", async () => {
+  it("does not try to refresh public session endpoints", async () => {
     setSession(tokens("1"));
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ detail: "bad" }, 401));
     vi.stubGlobal("fetch", fetchMock);

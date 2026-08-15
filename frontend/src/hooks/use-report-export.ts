@@ -4,6 +4,7 @@ import { exportCsvReport, exportPdfReport } from "../controllers/export-controll
 import type { AnalyzePayload } from "../models/analyze-models";
 
 type Options = {
+  scope: "single" | "portfolio";
   getPayload: () => AnalyzePayload | null;
   onStatus: (message: string) => void;
 };
@@ -12,7 +13,7 @@ type Options = {
  * Owns CSV/PDF report export: the async PDF loading flag and the handlers that
  * wrap the export controller. Keeps export orchestration out of the view (SRP).
  */
-export function useReportExport({ getPayload, onStatus }: Options) {
+export function useReportExport({ scope, getPayload, onStatus }: Options) {
   const [exportingPdf, setExportingPdf] = useState(false);
 
   function exportCsv() {
@@ -21,7 +22,7 @@ export function useReportExport({ getPayload, onStatus }: Options) {
       onStatus("No analysis results available for export.");
       return;
     }
-    const filename = exportCsvReport(payload);
+    const filename = exportCsvReport(payload, scope);
     onStatus(`CSV export generated (${filename}).`);
   }
 
@@ -34,7 +35,7 @@ export function useReportExport({ getPayload, onStatus }: Options) {
 
     setExportingPdf(true);
     try {
-      const filename = await exportPdfReport(payload);
+      const filename = await exportPdfReport(payload, scope);
       onStatus(`PDF export generated (${filename}).`);
     } catch (err) {
       const message = err instanceof Error ? err.message : "PDF export failed";

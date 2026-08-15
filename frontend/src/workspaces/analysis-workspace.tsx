@@ -1,8 +1,10 @@
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 
 import styles from "../app.module.css";
 import { SidebarPanel, useAppShell, useShellStatus } from "../app-shell-context";
+import { AnalysisRunSelector } from "../components/analysis/analysis-run-selector";
 import { AnalysisSidebarPanel } from "../components/analysis/analysis-sidebar-panel";
 import { AssistantDrawer } from "../components/assistant-drawer";
 import { FileValidationModal } from "../components/FileValidationModal";
@@ -15,6 +17,16 @@ import { useChat } from "../hooks/use-chat";
 import { useReportExport } from "../hooks/use-report-export";
 import { useSequenceAi } from "../hooks/use-sequence-ai";
 import { useSequenceReview } from "../hooks/use-sequence-review";
+import type { HistoryItem } from "../models/auth-models";
+import { historyGateway } from "../services/history-service";
+
+function recentAnalysisLabel(item: HistoryItem): string {
+  const date = new Date(item.created_at);
+  const dateLabel = Number.isNaN(date.getTime())
+    ? ""
+    : date.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+  return dateLabel ? `${item.label} · ${dateLabel}` : item.label;
+}
 
 /**
  * The LASight workspace: QC, petrophysics, ML and AI over digital LAS files.
@@ -32,11 +44,27 @@ export function AnalysisWorkspace() {
 
   const [demoMode, setDemoMode] = useState(false);
   const [assistantOpen, setAssistantOpen] = useState(false);
+  const queryClient = useQueryClient();
 
-  const analysis = useAnalysis();
+  const analysis = useAnalysis({
+    scope: "single",
+    onNewAnalysis: () => {
+      void queryClient.invalidateQueries({ queryKey: ["history"] });
+    },
+  });
+  const recentAnalyses = useQuery({
+    queryKey: ["history", "las", "single"],
+    queryFn: async () => {
+      const page = await historyGateway.list({ kind: "las", limit: 100, offset: 0 });
+      return page.items
+        .filter((item) => item.file_count === 1 && item.state !== "failed")
+        .map((item) => ({ value: item.item_id, label: recentAnalysisLabel(item) }));
+    },
+  });
   const sequence = useSequenceReview(analysis.payload);
   const sequenceAi = useSequenceAi();
   const reportExport = useReportExport({
+    scope: "single",
     getPayload: () => analysis.payload,
     onStatus: analysis.setStatus,
   });
@@ -85,6 +113,7 @@ export function AnalysisWorkspace() {
     <>
       <SidebarPanel>
         <AnalysisSidebarPanel
+          scope="single"
           collapsed={collapsed}
           isBusy={analysis.isBusy}
           aiEnabled={analysis.aiEnabled}
@@ -115,6 +144,19 @@ export function AnalysisWorkspace() {
         )}
 
       <main className={`${styles.mainBody} ${demoMode ? styles.demoMode : ""}`}>
+        <AnalysisRunSelector
+          currentAnalysisId={payload?.analysis_id ?? ""}
+          currentWellName={payload?.wells?.[0]?.well_name}
+          currentFileName={payload?.wells?.[0]?.file_name}
+          options={recentAnalyses.data ?? []}
+          loading={recentAnalyses.isPending}
+          onSelect={(analysisId) => {
+            if (analysisId && analysisId !== payload?.analysis_id) {
+              void analysis.adoptAnalysis(analysisId);
+            }
+          }}
+        />
+
         <SectionPanel>
           <TabBar />
         </SectionPanel>
@@ -140,6 +182,7 @@ export function AnalysisWorkspace() {
       </main>
 
       <AssistantDrawer
+        scope="single"
         open={assistantOpen}
         onToggle={() => setAssistantOpen((previous) => !previous)}
         analysisId={analysis.payload?.analysis_id || null}
