@@ -3,7 +3,7 @@ import type { TrackCalibration } from "../models/digitization-models";
 /**
  * Pixel <-> physical conversions for a calibrated track.
  *
- * A deliberate mirror of `wellsight_training/calibration.py`. Duplicating
+ * A deliberate mirror of `orion_training/calibration.py`. Duplicating
  * arithmetic across a language boundary is normally a smell, but the
  * alternative is worse here: the review canvas has to label its value axis and
  * read out the value under the cursor *live*, at 60 fps, and round-tripping
