@@ -1,12 +1,23 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { DEFAULT_PREPROCESS, type TrackCrop } from "../../../models/digitization-models";
+import {
+  type CropSource,
+  nextCropSeed,
+} from "../../../controllers/detection-controller";
+import {
+  DEFAULT_PREPROCESS,
+  type DetectedTrack,
+  type TrackCrop,
+} from "../../../models/digitization-models";
 import { SectionPanel } from "../../section-panel";
 import { defaultCrop, normalizeCrop } from "../cropper/crop-rect";
+import { DetectionStatusChip } from "../cropper/detection-status-chip";
+import { preferredTrack, trackToCrop } from "../cropper/detected-tracks";
 import { TrackCropper } from "../cropper/track-cropper";
 import { useJobController } from "../job-context";
 import styles from "./step-layout.module.css";
+import { TrackPicker } from "./track-picker";
 
 /**
  * Step 2 — clean up the scan and bound the track to digitize.
@@ -17,20 +28,49 @@ import styles from "./step-layout.module.css";
  */
 export function CropStep() {
   const navigate = useNavigate();
-  const { job, setCrop, preprocess } = useJobController();
+  const { job, setCrop, preprocess, retryDetection } = useJobController();
 
   const [crop, setLocalCrop] = useState<TrackCrop | null>(null);
   const [settings, setSettings] = useState(DEFAULT_PREPROCESS);
+  const [cropSource, setCropSource] = useState<CropSource>("none");
+  const [selectedTrackIndex, setSelectedTrackIndex] = useState<number | null>(null);
 
+  // Seed the crop from, in order: a crop already saved server-side; the
+  // model's preselected track, once detection finishes with a result; or the
+  // same untargeted default this step always used before detection existed.
+  // Re-runs on every `job` update (so a detection landing after mount, or an
+  // improved one after a preprocess re-run, is picked up) but does nothing
+  // once the user has touched the rectangle - see `nextCropSeed`.
   useEffect(() => {
-    if (!job || crop) return;
-    setLocalCrop(job.crop ?? defaultCrop(job.raster));
-  }, [job, crop]);
+    if (!job) return;
+
+    const preferred =
+      job.detection?.status === "done" && job.detection.tracks.length > 0
+        ? preferredTrack(job.detection.tracks, job.detection.depth_column)
+        : null;
+    const preferredCrop = preferred ? trackToCrop(preferred, job.raster) : null;
+
+    const seed = nextCropSeed(cropSource, job.crop, job.detection, preferredCrop);
+    if (seed) {
+      setLocalCrop(seed);
+      if (!job.crop) {
+        setCropSource("detection");
+        setSelectedTrackIndex(preferred?.index ?? null);
+      }
+      return;
+    }
+
+    if (cropSource === "none") {
+      setLocalCrop(defaultCrop(job.raster));
+      setCropSource("default");
+    }
+  }, [job, cropSource]);
 
   if (!job || !crop) return null;
 
   const preprocessResult = job.preprocess;
   const cropError = crop.y_bottom <= crop.y_top ? "Bottom row must be below top row." : null;
+  const detectedTracks = job.detection?.tracks ?? [];
 
   /**
    * Repair a typed value before it reaches the crop.
@@ -39,8 +79,21 @@ export function CropStep() {
    * so without this an inverted or out-of-raster crop reaches the pipeline and
    * produces a calibration that is arithmetically fine and meaningless.
    */
-  const editCrop = (patch: Partial<TrackCrop>) =>
+  const editCrop = (patch: Partial<TrackCrop>) => {
+    setCropSource("user");
     setLocalCrop(normalizeCrop({ ...crop, ...patch }, job.raster));
+  };
+
+  // A click is a deliberate choice, not a provisional guess - treated the
+  // same as a manual drag ("user"), so a later re-detection (e.g. after a
+  // preprocess re-run) cannot silently override a track the user picked on
+  // purpose. Only the auto-preselected track on a still-untouched crop uses
+  // the more provisional "detection" source (see the seeding effect above).
+  const selectTrack = (track: DetectedTrack) => {
+    setCropSource("user");
+    setSelectedTrackIndex(track.index);
+    setLocalCrop(trackToCrop(track, job.raster));
+  };
 
   return (
     <>
@@ -136,7 +189,27 @@ export function CropStep() {
           multi-track scan produces confident nonsense.
         </p>
 
-        <TrackCropper job={job} crop={crop} onChange={setLocalCrop} />
+        <DetectionStatusChip
+          job={job}
+          onRetry={() => retryDetection.mutate()}
+          retrying={retryDetection.isPending}
+        />
+
+        <TrackPicker
+          tracks={detectedTracks}
+          selectedIndex={selectedTrackIndex}
+          onSelect={selectTrack}
+        />
+
+        <TrackCropper
+          job={job}
+          crop={crop}
+          onChange={setLocalCrop}
+          detectedTracks={detectedTracks}
+          selectedTrackIndex={selectedTrackIndex}
+          onSelectTrack={selectTrack}
+          onDragStart={() => setCropSource("user")}
+        />
 
         <div className={styles.fieldGrid}>
           <div className={styles.field}>

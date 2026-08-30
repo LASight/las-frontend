@@ -70,6 +70,54 @@ export interface TrackCrop {
   y_bottom: number;
 }
 
+/**
+ * Where automatic track detection stands for one job.
+ *
+ * `"unavailable"` is distinct from `"failed"`: it means the environment or the
+ * page itself rules detection out (no checkpoint on this server, or a page
+ * outside the model's training size) rather than something breaking on this
+ * particular attempt. The two need different wording — "draw the crop by
+ * hand, detection isn't set up here" is not the same message as "detection
+ * broke on this page, try again."
+ */
+export type DetectionStatus = "pending" | "running" | "done" | "failed" | "unavailable";
+
+/**
+ * One track the layout model found, in full-image pixel coordinates.
+ *
+ * Two boxes, not one. `bounds` is the **union** extent — every pixel the
+ * model predicted as this track, wobble included — and is what should be
+ * drawn: the honest, wobbling shape. `seed_bounds` is a robust **interior**
+ * box, always contained within `bounds`, and is what should seed a
+ * `TrackCrop` sent to the crop endpoint. Measured wobble reaches 7% of page
+ * width, so on a narrow track the union box can include a slice of the
+ * neighbouring track — feeding that to the curve digitizer is the exact
+ * domain shift the backend's segmentation adapter warns turns into confident
+ * garbage, which `seed_bounds` exists to avoid.
+ */
+export interface DetectedTrack {
+  /** Left-to-right position among the tracks found, 0-based. */
+  index: number;
+  bounds: TrackCrop;
+  seed_bounds: TrackCrop;
+  confidence: number;
+}
+
+/** Where automatic track detection stands for one job, and what it found. */
+export interface TrackDetection {
+  status: DetectionStatus;
+  tracks: DetectedTrack[];
+  /**
+   * Where the model put the depth-number column, when it found one. Not
+   * decoration — on this corpus the GR track (what the MVP digitizes) is the
+   * one immediately left of the depth column, so this is what lets the client
+   * preselect the right track rather than the widest one.
+   */
+  depth_column: TrackCrop | null;
+  message: string;
+  model_version: string;
+}
+
 /** The scale and depth range the operator read off the scan header. */
 export interface TrackCalibration {
   value_min: number;
@@ -158,6 +206,12 @@ export interface JobSummary {
   created_at: number;
   raster: RasterInfo;
   preprocess: PreprocessResult | null;
+  /**
+   * Required, not optional — every job created going forward carries one, and
+   * making it required here is what forces `MockDigitizationGateway` to be
+   * updated for this field rather than silently drifting from the real API.
+   */
+  detection: TrackDetection | null;
   crop: TrackCrop | null;
   calibration: TrackCalibration | null;
   settings: SegmentationSettings | null;

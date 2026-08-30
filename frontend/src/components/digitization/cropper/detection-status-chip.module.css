@@ -1,0 +1,64 @@
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.35rem 0.65rem;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.3;
+  width: fit-content;
+}
+
+.chip[data-status="done"] {
+  border-color: var(--accent-green);
+  color: var(--accent-green);
+}
+
+.chip[data-status="failed"] {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.chip[data-status="unavailable"] {
+  border-color: var(--line);
+  color: var(--muted);
+}
+
+.spinner {
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 50%;
+  border: 1.5px solid currentColor;
+  border-top-color: transparent;
+  animation: spin 0.7s linear infinite;
+  flex: none;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.retry {
+  font: inherit;
+  font-size: 0.74rem;
+  padding: 0.1rem 0.5rem;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.retry:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.retry:disabled {
+  opacity: 0.5;
+  cursor: default;
+}

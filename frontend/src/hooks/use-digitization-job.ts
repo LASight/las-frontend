@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 
+import { isDetecting } from "../controllers/detection-controller";
 import { isRunning, stepForPhase } from "../controllers/digitization-job-controller";
 import type {
   JobSummary,
@@ -28,6 +29,16 @@ import { digitizationGateway } from "../services/digitization-service";
 /** How often to poll while segmentation runs. */
 const POLL_INTERVAL_MS = 1200;
 
+/**
+ * How often to poll while track detection runs.
+ *
+ * Shorter than `POLL_INTERVAL_MS`: detection is a single sub-second forward
+ * pass over one page, not minutes of tiled inference, so polling at the
+ * segmentation cadence would leave boxes visibly late by up to 1.2 s after
+ * they are actually ready - noticeable on something this quick.
+ */
+const DETECT_POLL_INTERVAL_MS = 400;
+
 export function jobQueryKey(jobId: string) {
   return ["digitization", "job", jobId] as const;
 }
@@ -42,8 +53,14 @@ export function useDigitizationJob(jobId: string | undefined) {
     enabled: !!jobId,
     // Poll only while the server is working. A finished job never changes on
     // its own, and polling one forever is pure waste on a laptop demo.
-    refetchInterval: (query) =>
-      isRunning(query.state.data ?? null) ? POLL_INTERVAL_MS : false,
+    // Detection is checked first and gets the tighter interval - the two
+    // never overlap in practice (detection never runs during segmentation),
+    // but if they ever did, the faster poll is the more correct one to use.
+    refetchInterval: (query) => {
+      const job = query.state.data ?? null;
+      if (isDetecting(job)) return DETECT_POLL_INTERVAL_MS;
+      return isRunning(job) ? POLL_INTERVAL_MS : false;
+    },
   });
 
   function writeJob(job: JobSummary) {
@@ -53,6 +70,12 @@ export function useDigitizationJob(jobId: string | undefined) {
   const preprocess = useMutation({
     mutationFn: (settings: PreprocessSettings) =>
       digitizationGateway.preprocess(jobId as string, settings),
+    onSuccess: writeJob,
+  });
+
+  /** The retry button for a failed or unavailable detection. */
+  const retryDetection = useMutation({
+    mutationFn: () => digitizationGateway.detectTracks(jobId as string),
     onSuccess: writeJob,
   });
 
@@ -93,6 +116,7 @@ export function useDigitizationJob(jobId: string | undefined) {
     error: query.error instanceof Error ? query.error.message : null,
     refetch: query.refetch,
     preprocess,
+    retryDetection,
     setCrop,
     setCalibration,
     startSegmentation,
