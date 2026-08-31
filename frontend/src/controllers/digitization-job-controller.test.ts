@@ -56,6 +56,7 @@ function job(overrides: Partial<JobSummary> = {}): JobSummary {
       dpi: 300,
     },
     preprocess: null,
+    detection: null,
     crop: null,
     calibration: null,
     settings: null,

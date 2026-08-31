@@ -48,6 +48,12 @@ export interface DigitizationGateway {
   deleteJob(jobId: string): Promise<void>;
 
   preprocess(jobId: string, settings: PreprocessSettings): Promise<JobSummary>;
+  /**
+   * Ask again, without a re-upload. Also what a preprocess re-run and the
+   * initial upload trigger server-side — exposed here as the retry button for
+   * a failed or unavailable detection.
+   */
+  detectTracks(jobId: string): Promise<JobSummary>;
   setCrop(jobId: string, crop: TrackCrop): Promise<JobSummary>;
   setCalibration(jobId: string, calibration: TrackCalibration): Promise<JobSummary>;
 
@@ -100,6 +106,12 @@ export class HttpDigitizationGateway implements DigitizationGateway {
 
   preprocess(jobId: string, settings: PreprocessSettings): Promise<JobSummary> {
     return postJson<JobSummary>(`${BASE}/jobs/${jobId}/preprocess`, settings);
+  }
+
+  detectTracks(jobId: string): Promise<JobSummary> {
+    return apiRequest<JobSummary>(`${BASE}/jobs/${jobId}/detect-tracks`, {
+      method: "POST",
+    });
   }
 
   setCrop(jobId: string, crop: TrackCrop): Promise<JobSummary> {

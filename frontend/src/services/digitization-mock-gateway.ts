@@ -11,6 +11,7 @@ import {
   type TileLayer,
   type TrackCalibration,
   type TrackCrop,
+  type TrackDetection,
 } from "../models/digitization-models";
 import type { DigitizationGateway } from "./digitization-service";
 
@@ -75,6 +76,30 @@ function delay<T>(value: T, ms = 180): Promise<T> {
   return new Promise((resolve) => setTimeout(() => resolve(value), ms));
 }
 
+/**
+ * A plausible three-track layout with a depth column between the first two -
+ * `[margin][Track 0: GR/SP][DEPTHS][Track 1][Track 2][margin]`, matching the
+ * real corpus's usual arrangement closely enough to exercise
+ * `preferredTrack`'s "the GR track sits left of the depth column" heuristic
+ * in a demo with no backend at all.
+ */
+function fakeDetection(): TrackDetection {
+  const box = (x0: number, x1: number): TrackCrop => ({
+    x_left: x0, x_right: x1, y_top: 0, y_bottom: MOCK_HEIGHT,
+  });
+  return {
+    status: "done",
+    tracks: [
+      { index: 0, bounds: box(60, 560), seed_bounds: box(60, 560), confidence: 0.97 },
+      { index: 1, bounds: box(620, 980), seed_bounds: box(620, 970), confidence: 0.95 },
+      { index: 2, bounds: box(980, 1340), seed_bounds: box(985, 1335), confidence: 0.93 },
+    ],
+    depth_column: box(560, 620),
+    message: "",
+    model_version: "mock",
+  };
+}
+
 export class MockDigitizationGateway implements DigitizationGateway {
   private jobs = new Map<string, MockJob>();
 
@@ -106,6 +131,7 @@ export class MockDigitizationGateway implements DigitizationGateway {
         dpi: 300,
       },
       preprocess: null,
+      detection: { status: "pending", tracks: [], depth_column: null, message: "", model_version: "" },
       crop: null,
       calibration: null,
       settings: null,
@@ -115,7 +141,31 @@ export class MockDigitizationGateway implements DigitizationGateway {
     };
 
     this.jobs.set(jobId, { summary, trueX, curveX: null, observed: null });
+
+    // Fire-and-forget, mirroring the real backend: detection auto-starts on
+    // upload and resolves in the background, so the polling hook has
+    // something genuine to observe rather than a value that is already final
+    // by the time the wizard renders.
+    void this.runFakeDetection(jobId);
+
     return delay(summary, 400);
+  }
+
+  private async runFakeDetection(jobId: string): Promise<void> {
+    await delay(undefined, 900);
+    const job = this.jobs.get(jobId);
+    if (!job) return; // deleted while "detecting"
+    job.summary = { ...job.summary, detection: fakeDetection() };
+  }
+
+  detectTracks(jobId: string): Promise<JobSummary> {
+    const job = this.require(jobId);
+    job.summary = {
+      ...job.summary,
+      detection: { status: "running", tracks: [], depth_column: null, message: "", model_version: "" },
+    };
+    void this.runFakeDetection(jobId);
+    return delay(job.summary, 60);
   }
 
   getJob(jobId: string): Promise<JobSummary> {

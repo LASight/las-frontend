@@ -1,7 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import type { JobSummary, TrackCrop } from "../../../models/digitization-models";
+import type {
+  DetectedTrack,
+  JobSummary,
+  TrackCrop,
+} from "../../../models/digitization-models";
 import { ScanMinimap } from "../scan-minimap";
+import { DetectedTrackLayer } from "./detected-track-layer";
+import { trackAtPoint } from "./detected-tracks";
 import styles from "./track-cropper.module.css";
 import {
   CORNER_HANDLES,
@@ -47,6 +53,24 @@ type Props = {
   job: JobSummary;
   crop: TrackCrop;
   onChange: (crop: TrackCrop) => void;
+  /** Boxes the layout model found, drawn as coloured outlines. Omit (or pass
+   * an empty array) on a job with no detection - the layer then renders
+   * nothing and the cropper behaves exactly as it did before this existed. */
+  detectedTracks?: DetectedTrack[];
+  /** Which detected track's outline to suppress, because `.selection` is
+   * already marking it. */
+  selectedTrackIndex?: number | null;
+  /** Called when a click lands on a detected track's box rather than on a
+   * crop handle or inside the current selection. */
+  onSelectTrack?: (track: DetectedTrack) => void;
+  /** Fires the instant a crop-handle drag begins - before the first
+   * `onChange`. A caller auto-adopting a detected track while nothing has
+   * been touched yet needs to stop doing that at the moment a drag *starts*,
+   * not at its first reported movement: a detection landing in the narrow
+   * gap between pointerdown and the first pointermove would otherwise still
+   * be free to clobber a drag that has, from the user's perspective, already
+   * begun. */
+  onDragStart?: () => void;
 };
 
 /** Arrow-key nudge, in image pixels. Shift multiplies it. */
@@ -57,7 +81,15 @@ type Drag =
   | { kind: "pan" }
   | { kind: "crop"; handle: CropHandle; lastImagePoint: Point };
 
-export function TrackCropper({ job, crop, onChange }: Props) {
+export function TrackCropper({
+  job,
+  crop,
+  onChange,
+  detectedTracks = [],
+  selectedTrackIndex = null,
+  onSelectTrack,
+  onDragStart,
+}: Props) {
   const stageRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const dragRef = useRef<Drag | null>(null);
@@ -162,10 +194,24 @@ export function TrackCropper({ job, crop, onChange }: Props) {
         lastImagePoint: screenToImage(point, view),
       };
       setActiveHandle(handle);
-    } else {
-      dragRef.current = { kind: "pan" };
-      pan.beginPan(point);
+      onDragStart?.();
+      return;
     }
+
+    // A click outside the current crop, on one of the OTHER detected boxes,
+    // selects it instead of starting a pan - checked only after the crop's
+    // own handles, so dragging or moving the active selection always wins
+    // over track selection when the two overlap.
+    if (onSelectTrack && detectedTracks.length > 0) {
+      const hit = trackAtPoint(detectedTracks, screenToImage(point, view));
+      if (hit) {
+        onSelectTrack(hit);
+        return;
+      }
+    }
+
+    dragRef.current = { kind: "pan" };
+    pan.beginPan(point);
   }
 
   function handlePointerMove(event: React.PointerEvent<HTMLDivElement>) {
@@ -336,6 +382,14 @@ export function TrackCropper({ job, crop, onChange }: Props) {
             className={styles.shade}
             style={{ left: box.right, top: box.top, right: 0, height: boxHeight }}
           />
+
+          {detectedTracks.length > 0 && (
+            <DetectedTrackLayer
+              tracks={detectedTracks}
+              selectedIndex={selectedTrackIndex}
+              view={view}
+            />
+          )}
 
           <div
             className={styles.selection}
