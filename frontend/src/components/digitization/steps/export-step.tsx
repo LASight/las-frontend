@@ -68,7 +68,10 @@ export function ExportStep() {
   );
 
   const exportLas = useMutation({
-    mutationFn: () => digitizationGateway.exportLas(job!.job_id, request),
+    mutationFn: async () => {
+      const { edits, edits_revision } = await review.flushEdits();
+      return digitizationGateway.exportLas(job!.job_id, { ...request, edits, edits_revision });
+    },
     onSuccess: ({ text, fileName }) => {
       setPreview(text);
       downloadText(fileName, text);
@@ -76,7 +79,10 @@ export function ExportStep() {
   });
 
   const sendToAnalysis = useMutation({
-    mutationFn: () => digitizationGateway.sendToAnalysis(job!.job_id, request),
+    mutationFn: async () => {
+      const { edits, edits_revision } = await review.flushEdits();
+      return digitizationGateway.sendToAnalysis(job!.job_id, { ...request, edits, edits_revision });
+    },
     onSuccess: (result) => navigate(`/analysis?analysis=${result.analysis_id}`),
   });
 
@@ -184,6 +190,13 @@ export function ExportStep() {
 
         {exportError && <p className={styles.error}>{exportError}</p>}
         {analysisError && <p className={styles.error}>{analysisError}</p>}
+        {review.error && <p className={styles.error}>{review.error}</p>}
+        {review.saveError && <p className={styles.error}>Corrections not saved: {review.saveError}{" "}
+          <button type="button" disabled={review.isSaving} onClick={() => {
+            if (window.confirm("Discard this unsaved local draft and load the server's saved corrections?")) void review.restoreSavedEdits();
+          }}>Restore saved corrections</button>
+        </p>}
+        {review.isSaving && <p role="status">Saving corrections…</p>}
 
         <div className={styles.actions}>
           <button
@@ -197,7 +210,7 @@ export function ExportStep() {
           <button
             type="button"
             className={styles.secondaryBtn}
-            disabled={sendToAnalysis.isPending}
+            disabled={sendToAnalysis.isPending || exportLas.isPending || review.isLoading || !!review.error}
             onClick={() => sendToAnalysis.mutate()}
             title="Run the LAS analysis workflow on this curve without downloading it first"
           >
@@ -206,7 +219,7 @@ export function ExportStep() {
           <button
             type="button"
             className={styles.primaryBtn}
-            disabled={exportLas.isPending}
+            disabled={exportLas.isPending || sendToAnalysis.isPending || review.isLoading || !!review.error}
             onClick={() => exportLas.mutate()}
           >
             {exportLas.isPending ? "Building…" : "Download LAS"}

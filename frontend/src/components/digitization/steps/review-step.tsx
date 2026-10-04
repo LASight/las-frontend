@@ -69,6 +69,16 @@ export function ReviewStep() {
           redraw where the model wandered, and discard anything you cannot verify —
           discarded depths export as NULL rather than as a guess.
         </p>
+        <p role="status">{review.isSaving ? "Saving corrections…" : review.hasUnsavedEdits ? "Corrections not saved." : "Corrections saved."}</p>
+        {review.saveError && (
+          <p className={styles.error}>
+            {review.saveError}{" "}
+            <button type="button" onClick={() => { void review.flushEdits().catch(() => {}); }}>Retry saving</button>
+            {" "}<button type="button" disabled={review.isSaving} onClick={() => {
+              if (window.confirm("Discard this unsaved local draft and load the server's saved corrections?")) void review.restoreSavedEdits();
+            }}>Restore saved corrections</button>
+          </p>
+        )}
 
         <div className={reviewStyles.layout}>
           <div className={reviewStyles.canvasColumn}>

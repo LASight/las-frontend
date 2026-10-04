@@ -194,6 +194,7 @@ export interface LasHeaderFields {
 
 export interface ExportRequest {
   edits: CurveEdit[];
+  edits_revision?: number;
   header: LasHeaderFields;
   step: number;
 }
@@ -217,6 +218,9 @@ export interface JobSummary {
   settings: SegmentationSettings | null;
   progress: SegmentationProgress | null;
   quality: CurveQuality | null;
+  /** Durable review overlay; omitted only by older servers. */
+  edits?: CurveEdit[];
+  edits_revision?: number;
   error: string | null;
 }
 

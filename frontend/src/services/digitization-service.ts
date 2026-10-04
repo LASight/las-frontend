@@ -45,6 +45,7 @@ export interface DigitizationGateway {
 
   createJob(file: File): Promise<JobSummary>;
   getJob(jobId: string): Promise<JobSummary>;
+  setEdits(jobId: string, edits: CurveEdit[], revision?: number): Promise<JobSummary>;
   deleteJob(jobId: string): Promise<void>;
 
   preprocess(jobId: string, settings: PreprocessSettings): Promise<JobSummary>;
@@ -98,6 +99,14 @@ export class HttpDigitizationGateway implements DigitizationGateway {
 
   getJob(jobId: string): Promise<JobSummary> {
     return apiRequest<JobSummary>(`${BASE}/jobs/${jobId}`);
+  }
+
+  setEdits(jobId: string, edits: CurveEdit[], revision?: number): Promise<JobSummary> {
+    return apiRequest<JobSummary>(`${BASE}/jobs/${jobId}/edits`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ edits, edits_revision: revision }),
+    });
   }
 
   deleteJob(jobId: string): Promise<void> {

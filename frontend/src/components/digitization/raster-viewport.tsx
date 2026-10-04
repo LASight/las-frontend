@@ -487,7 +487,7 @@ export function RasterViewport({
             onPointerLeave={() => setCursor(null)}
           />
           {scan.isLoading && <div className={styles.loading}>Loading tiles…</div>}
-          {scan.error && <div className={styles.tileError}>{scan.error}</div>}
+          {scan.error && <div className={styles.tileError}>{scan.error} <button type="button" onClick={scan.retry}>Retry tiles</button></div>}
         </div>
 
         {/* The whole scan beside the crop of it.

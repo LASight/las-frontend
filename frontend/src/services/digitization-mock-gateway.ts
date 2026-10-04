@@ -2,6 +2,7 @@ import {
   DEFAULT_CALIBRATION,
   DEFAULT_SEGMENTATION,
   type CurveWindow,
+  type CurveEdit,
   type DigitizationHealth,
   type ExportRequest,
   type JobSummary,
@@ -137,6 +138,8 @@ export class MockDigitizationGateway implements DigitizationGateway {
       settings: null,
       progress: null,
       quality: null,
+      edits: [],
+      edits_revision: 0,
       error: null,
     };
 
@@ -170,6 +173,13 @@ export class MockDigitizationGateway implements DigitizationGateway {
 
   getJob(jobId: string): Promise<JobSummary> {
     return delay(this.require(jobId).summary, 60);
+  }
+
+  async setEdits(jobId: string, edits: CurveEdit[], revision?: number): Promise<JobSummary> {
+    const job = this.require(jobId);
+    if (revision !== undefined && revision !== job.summary.edits_revision) throw new Error("Corrections revision conflict.");
+    job.summary = { ...job.summary, edits: structuredClone(edits), edits_revision: (job.summary.edits_revision ?? 0) + 1 };
+    return job.summary;
   }
 
   async deleteJob(jobId: string): Promise<void> {

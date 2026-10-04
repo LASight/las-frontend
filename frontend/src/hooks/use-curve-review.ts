@@ -11,8 +11,9 @@ import {
   undoLast,
   type CurveSeries,
 } from "../controllers/curve-edit-controller";
-import type { CurveEdit, JobSummary } from "../models/digitization-models";
+import type { JobSummary } from "../models/digitization-models";
 import { digitizationGateway } from "../services/digitization-service";
+import { useReviewEdits } from "./use-review-edits";
 
 /**
  * The human-in-the-loop correction state for one digitized curve.
@@ -37,7 +38,8 @@ export function curveQueryKey(jobId: string) {
 
 export function useCurveReview(job: JobSummary | null) {
   const jobId = job?.job_id;
-  const [edits, setEdits] = useState<CurveEdit[]>([]);
+  const persistence = useReviewEdits(job);
+  const { edits, update: setEdits } = persistence;
   const [tool, setTool] = useState<ReviewTool>("inspect");
   const [showMask, setShowMask] = useState(true);
   const [status, setStatus] = useState("");
@@ -75,20 +77,20 @@ export function useCurveReview(job: JobSummary | null) {
       setEdits((previous) => addEdit(previous, edit));
       setStatus(`Redrew ${edit.y1 - edit.y0} rows.`);
     },
-    []
+    [setEdits]
   );
 
   const discardRange = useCallback((y0: number, y1: number) => {
     if (y1 <= y0) return;
     setEdits((previous) => addEdit(previous, { kind: "discard", y0, y1 }));
     setStatus(`Discarded ${y1 - y0} rows — they will export as NULL (-999.25).`);
-  }, []);
+  }, [setEdits]);
 
   const acceptRange = useCallback((y0: number, y1: number) => {
     if (y1 <= y0) return;
     setEdits((previous) => addEdit(previous, { kind: "accept", y0, y1 }));
     setStatus(`Marked ${y1 - y0} rows as reviewed.`);
-  }, []);
+  }, [setEdits]);
 
   const undo = useCallback(() => {
     setEdits((previous) => {
@@ -96,12 +98,12 @@ export function useCurveReview(job: JobSummary | null) {
       setStatus("Undid the last correction.");
       return undoLast(previous);
     });
-  }, []);
+  }, [setEdits]);
 
   const reset = useCallback(() => {
-    setEdits(resetEdits());
+    setEdits(() => resetEdits());
     setStatus("Reverted to the model's original output.");
-  }, []);
+  }, [setEdits]);
 
   return {
     /** The model's raw output, never mutated. */
@@ -112,6 +114,11 @@ export function useCurveReview(job: JobSummary | null) {
     observed: corrected.observed,
     gaps,
     edits,
+    flushEdits: persistence.flush,
+    restoreSavedEdits: persistence.restoreSaved,
+    isSaving: persistence.saving,
+    saveError: persistence.error,
+    hasUnsavedEdits: persistence.dirty,
     stats,
     tool,
     setTool,

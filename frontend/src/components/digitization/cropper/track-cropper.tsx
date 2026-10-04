@@ -109,7 +109,7 @@ export function TrackCropper({
   const pan = usePanZoom({ image, viewport, targetRef: stageRef });
   const { view } = pan;
 
-  const { tiles, error, isLoading } = useLodTiles({
+  const { tiles, error, isLoading, retry } = useLodTiles({
     jobId: job.job_id,
     image,
     view,
@@ -437,7 +437,7 @@ export function TrackCropper({
             />
           ))}
 
-          {error && <div className={styles.error}>{error}</div>}
+          {error && <div className={styles.error}>{error} <button type="button" onClick={retry}>Retry tiles</button></div>}
           {isLoading && !error && <div className={styles.status}>Loading tiles…</div>}
         </div>
 
