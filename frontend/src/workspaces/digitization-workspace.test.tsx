@@ -23,6 +23,22 @@ function StepProbe() {
 }
 
 describe("wizard navigation between independent jobs", () => {
+  it("redirects member export deep links to its unified result with that member selected", async () => {
+    (globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+    const host = document.createElement("div"); const root = createRoot(host);
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
+    client.setQueryData(jobQueryKey("first"), segmentJob("first"));
+    const router = createMemoryRouter([
+      { path: "/digitize/:jobId", element: <DigitizationWorkspace />, children: [{ path: "export", element: <p>Forbidden member export</p> }] },
+      { path: "/digitize/curves/:collectionId", element: <p>Unified result</p> },
+    ], { initialEntries: ["/digitize/first/export"] });
+    try {
+      await act(async () => root.render(<QueryClientProvider client={client}><AppShellProvider value={{ sidebarSlot: null, collapsed: false, setStatus: () => {}, setBusy: () => {} }}><RouterProvider router={router} /></AppShellProvider></QueryClientProvider>));
+      expect(router.state.location.pathname).toBe("/digitize/curves/collection");
+      expect(router.state.location.search).toBe("?segment=first&view=result");
+      expect(host.textContent).toBe("Unified result");
+    } finally { await act(async () => root.unmount()); router.dispose(); client.clear(); }
+  });
   it("keeps a single segment panel and remounts only the step when the job changes", async () => {
     (globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
     const errors = vi.spyOn(console, "error").mockImplementation(() => {});

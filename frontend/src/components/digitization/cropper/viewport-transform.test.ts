@@ -2,10 +2,12 @@ import { describe, expect, it } from "vitest";
 
 import {
   MAX_SCALE,
+  MIN_SCALE,
   centerOnRow,
   clampView,
   fitHeightScale,
   fitWidthScale,
+  focusRegionStart,
   imageToScreen,
   initialView,
   panBy,
@@ -136,5 +138,78 @@ describe("visibleImageRect", () => {
     expect(rect.y0).toBe(0);
     expect(rect.x1).toBeLessThanOrEqual(IMAGE.width);
     expect(rect.y1).toBeLessThanOrEqual(IMAGE.height);
+  });
+});
+
+describe("focusRegionStart — readable selected segment, not whole-track fit", () => {
+  const image = { width: 2705, height: 40000 };
+  const viewport = { width: 564, height: 520 };
+  const repeat = { x_left: 25, x_right: 528, y_top: 14662, y_bottom: 16692 };
+
+  it("focuses the saved start and includes the depth labels outside the GR crop", () => {
+    const view = focusRegionStart(repeat, image, viewport);
+    expect(view.scale).toBeCloseTo((viewport.width - 48) / 648, 10);
+    const top = imageToScreen({ x: repeat.x_left, y: repeat.y_top }, view);
+    expect(top.y).toBeCloseTo(24 + 60 * view.scale, 10);
+    const depthLabel = imageToScreen({ x: 600, y: repeat.y_top }, view);
+    expect(depthLabel.x).toBeGreaterThan(0);
+    expect(depthLabel.x).toBeLessThan(viewport.width - 24);
+    expect(visibleImageRect(view, image, viewport).y0).toBeGreaterThan(14000);
+  });
+
+  it("uses the same legible width zoom for 2k, 10k and 20k-row crops", () => {
+    const scales = [2030, 10000, 20000].map((height) => focusRegionStart({ ...repeat, y_bottom: repeat.y_top + height }, image, viewport).scale);
+    expect(new Set(scales).size).toBe(1);
+    expect(scales[0] * (repeat.x_right - repeat.x_left)).toBeGreaterThan(400);
+    expect(10000 * scales[0]).toBeGreaterThan(viewport.height * 10);
+  });
+
+  it("provides 120 source pixels on both sides and top alignment away from boundaries", () => {
+    const region = { x_left: 1400, x_right: 1903, y_top: 4000, y_bottom: 14000 };
+    const view = focusRegionStart(region, image, VIEWPORT);
+    expect(imageToScreen({ x: 1280, y: 3940 }, view)).toEqual(expect.objectContaining({ x: expect.closeTo(24, 6), y: expect.closeTo(24, 6) }));
+    expect(imageToScreen({ x: 2023, y: 4000 }, view).x).toBeCloseTo(VIEWPORT.width - 24, 6);
+    expect(imageToScreen({ x: 1400, y: 4000 }, view).y).toBeCloseTo(24 + 60 * view.scale, 6);
+  });
+
+  it("clamps near the raster bottom without changing the width-derived zoom", () => {
+    const region = { ...repeat, y_top: 39880, y_bottom: 40000 };
+    const view = focusRegionStart(region, image, viewport);
+    expect(view.scale).toBe(focusRegionStart(repeat, image, viewport).scale);
+    expect(view.ty).toBeCloseTo(viewport.height - image.height * view.scale, 6);
+    expect(imageToScreen({ x: 25, y: region.y_top }, view).y).toBeLessThan(viewport.height);
+    expect(imageToScreen({ x: 25, y: image.height }, view).y).toBeCloseTo(viewport.height, 6);
+    expect(clampView(view, image, viewport)).toEqual(view);
+  });
+
+  it("clamps top/left/right image boundaries and letterboxes a short raster", () => {
+    const smallImage = { width: 200, height: 50 };
+    const view = focusRegionStart({ x_left: 0, x_right: 200, y_top: 0, y_bottom: 50 }, smallImage, VIEWPORT);
+    expect(view.scale).toBeCloseTo((VIEWPORT.width - 48) / smallImage.width, 10);
+    expect(view.tx).toBeCloseTo(24, 10);
+    expect(view.ty).toBeCloseTo((VIEWPORT.height - smallImage.height * view.scale) / 2, 10);
+  });
+
+  it("honours MIN/MAX_SCALE, and clampView preserves that scale", () => {
+    const maximum = focusRegionStart({ x_left: 100, x_right: 101, y_top: 100, y_bottom: 200 }, image, VIEWPORT, { horizontalContext: 0 });
+    const hugeImage = { width: 100000000, height: 100000000 };
+    const minimum = focusRegionStart({ x_left: 0, x_right: hugeImage.width, y_top: 0, y_bottom: 10000 }, hugeImage, VIEWPORT);
+    expect(maximum.scale).toBe(MAX_SCALE); expect(minimum.scale).toBe(MIN_SCALE);
+    expect(clampView(maximum, image, VIEWPORT).scale).toBe(MAX_SCALE);
+    expect(clampView(minimum, hugeImage, VIEWPORT).scale).toBe(MIN_SCALE);
+  });
+
+  it("returns a finite fallback before the first viewport measurement", () => {
+    const view = focusRegionStart(repeat, image, { width: 0, height: 0 });
+    expect(Object.values(view).every(Number.isFinite)).toBe(true);
+    expect(view).toEqual(initialView(image, { width: 0, height: 0 }));
+  });
+
+  it("does not mutate crop, raster dimensions or viewport inputs", () => {
+    const crop = Object.freeze({ ...repeat });
+    const raster = Object.freeze({ ...image });
+    const size = Object.freeze({ ...viewport });
+    focusRegionStart(crop, raster, size);
+    expect(crop).toEqual(repeat); expect(raster).toEqual(image); expect(size).toEqual(viewport);
   });
 });

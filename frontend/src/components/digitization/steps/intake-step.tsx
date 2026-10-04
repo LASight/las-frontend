@@ -1,5 +1,5 @@
 import { useMutation } from "@tanstack/react-query";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { ScanLine } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -13,6 +13,8 @@ import {
   digitizationGateway,
 } from "../../../services/digitization-service";
 import intakeStyles from "./intake-step.module.css";
+import { collectionGateway } from "../../../services/collection-service";
+import type { JobSummary } from "../../../models/digitization-models";
 
 /**
  * Step 1 — upload a scanned raster log.
@@ -40,10 +42,19 @@ export function IntakeStep() {
   const { collapsed } = useAppShell();
   const [file, setFile] = useState<File | null>(null);
   const [dragging, setDragging] = useState(false);
+  const uploaded = useRef<JobSummary | null>(null);
 
   const upload = useMutation({
-    mutationFn: (selected: File) => digitizationGateway.createJob(selected),
-    onSuccess: (job) => navigate(`/digitize/${job.job_id}/crop`),
+    mutationFn: async (selected: File) => {
+      // Retry assembly failures without uploading the same TIFF again. If the
+      // create response was lost, the member's durable link recovers it.
+      const job = uploaded.current ? await digitizationGateway.getJob(uploaded.current.job_id) : await digitizationGateway.createJob(selected);
+      uploaded.current = job;
+      const collection = job.collection_id ? await collectionGateway.get(job.collection_id) : await collectionGateway.create(job.job_id, selected.name);
+      await collectionGateway.renameSegment(collection.collection_id, job.job_id, "Tramo 1");
+      return { collection, job };
+    },
+    onSuccess: ({ collection, job }) => navigate(`/digitize/curves/${encodeURIComponent(collection.collection_id)}?segment=${encodeURIComponent(job.job_id)}&view=crop`),
   });
 
   useShellStatus(
@@ -57,7 +68,7 @@ export function IntakeStep() {
 
   function handleFiles(files: FileList | null) {
     const selected = files?.[0];
-    if (selected) setFile(selected);
+    if (selected && !upload.isPending) { uploaded.current = null; setFile(selected); }
   }
 
   const errorMessage = upload.error instanceof Error ? upload.error.message : null;
@@ -71,9 +82,9 @@ export function IntakeStep() {
       <main className={appStyles.mainBody}>
         <SectionPanel title="Digitize a raster well log">
           <p className={styles.intro}>
-            Upload a scanned log as TIFF, PNG or JPEG. You will crop a single track,
-            enter its scale and depth range, run the segmentation model, correct the
-            recovered curve over the original scan, and export a CWLS 2.0 LAS file.
+            Upload a scanned log as TIFF, PNG or JPEG. Select all continuations of
+            one curve on the original scan, calibrate each interval and correct the
+            prediction in one workspace. Download one combined CWLS 2.0 LAS file.
           </p>
 
           <label
@@ -134,8 +145,8 @@ export function IntakeStep() {
           {IS_MOCK_GATEWAY && (
             <p className={styles.notice}>
               Mock mode is on (<code>VITE_DIGITIZATION_MOCK</code>). The workflow is
-              fully clickable, but the curve is generated in the browser — no model
-              runs, and nothing here is a digitization result.
+              not scientific evidence: predictions are generated in the browser.
+              The unified curve workspace requires the real collection API.
             </p>
           )}
 

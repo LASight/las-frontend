@@ -1,22 +1,19 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
-import appStyles from "../app.module.css";
-import { useShellStatus } from "../app-shell-context";
-import { SectionPanel } from "../components/section-panel";
+import { Navigate, useNavigate, useParams } from "react-router-dom";
 import styles from "../components/digitization/steps/step-layout.module.css";
-import exportStyles from "../components/digitization/steps/export-step.module.css";
+import unifiedStyles from "./curve-workspace.module.css";
+import { CombinedCurvePlot } from "../components/digitization/combined-curve-plot";
 import {
   EMPTY_OVERLAP_DRAFT, collectionIssues, collectionOutputIssue,
   readOverlapDraft, reconcileOverlapDraft, unresolvedOverlaps,
 } from "../controllers/collection-controller";
-import { stepForPhase } from "../controllers/digitization-job-controller";
 import { collectionQueryKey, useCollection } from "../hooks/use-collection";
-import { jobQueryKey } from "../hooks/use-digitization-job";
 import { flushCollectionEdits } from "../hooks/use-review-edits";
-import { EMPTY_LAS_HEADER, type CollectionExportRequest, type CollectionSummary, type LasHeaderFields } from "../models/digitization-models";
+import { EMPTY_LAS_HEADER, type CollectionExportRequest, type LasHeaderFields } from "../models/digitization-models";
 import { collectionGateway } from "../services/collection-service";
 import { API_BASE, ApiError } from "../services/http-client";
+import { identityIssue } from "../controllers/curve-queue-controller";
 
 const HEADER_LABELS: Record<keyof LasHeaderFields, string> = {
   well: "Well name", company: "Company", field_name: "Field", location: "Location",
@@ -25,7 +22,7 @@ const HEADER_LABELS: Record<keyof LasHeaderFields, string> = {
 
 export function CollectionWorkspace() {
   const { collectionId } = useParams<{ collectionId: string }>();
-  return collectionId ? <CollectionSummaryPage key={collectionId} collectionId={collectionId} /> : null;
+  return collectionId ? <Navigate to={`/digitize/curves/${encodeURIComponent(collectionId)}?view=result`} replace /> : null;
 }
 
 export function CollectionSummaryPage({ collectionId }: { collectionId: string }) {
@@ -39,8 +36,21 @@ export function CollectionSummaryPage({ collectionId }: { collectionId: string }
     catch { return EMPTY_OVERLAP_DRAFT; }
   });
   const [storageError, setStorageError] = useState<string | null>(null);
-  const [header, setHeader] = useState<LasHeaderFields>({ ...EMPTY_LAS_HEADER });
-  const [step, setStep] = useState(0.5);
+  const outputKey = `digitization-output-draft:${API_BASE}:${collectionId}`;
+  const [preferences] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(outputKey) ?? "null");
+      if (saved && Number.isFinite(saved.step) && saved.header && Object.keys(EMPTY_LAS_HEADER).every((key) => typeof saved.header[key] === "string")) return saved as { header: LasHeaderFields; step: number };
+    } catch { /* Never fill unknown well metadata. */ }
+    return { header: { ...EMPTY_LAS_HEADER }, step: 0.5 };
+  });
+  const [header, setHeader] = useState<LasHeaderFields>(preferences.header);
+  const [step, setStep] = useState(preferences.step);
+  const [preferencesError, setPreferencesError] = useState<string | null>(null);
+  useEffect(() => {
+    try { localStorage.setItem(outputKey, JSON.stringify({ header, step })); setPreferencesError(null); }
+    catch { setPreferencesError("No se pudo guardar el borrador de salida local. Mantené esta página abierta."); }
+  }, [outputKey, header, step]);
   const [preview, setPreview] = useState<string | null>(null);
   // Validate synchronously as well as on persistence: a refetch must not leave a
   // one-render window where an obsolete choice can be exported.
@@ -101,92 +111,75 @@ export function CollectionSummaryPage({ collectionId }: { collectionId: string }
   const request: CollectionExportRequest = {
     header, step, overlap_choices: currentDraft.choices, expected_revision: collection?.revision,
   };
-  useShellStatus(collection ? `${collection.title} — ${collection.segments.length} independent segments.` : "Loading collection…", busy || query.isFetching);
+  const ranges = collection && !identityIssue(collection) ? collection.segments.filter(({ job }) => !!job.calibration).slice().sort((a, b) => a.job.calibration!.depth_top - b.job.calibration!.depth_top) : [];
+  const gaps: Array<[number, number]> = [];
+  let bottom: number | undefined;
+  for (const { job } of ranges) {
+    const cal = job.calibration!;
+    if (bottom !== undefined && cal.depth_top > bottom) gaps.push([bottom, cal.depth_top]);
+    bottom = Math.max(bottom ?? cal.depth_bottom, cal.depth_bottom);
+  }
 
-  return <main className={appStyles.mainBody}>
-    <SectionPanel title={collection?.title ?? "Collection summary"}>
-      <p className={styles.intro}>One curve, independently calibrated segments from one original raster, including page breaks within that image. Review each segment with its normal wizard. Layout proposals do not prove continuity or read depths; no whole-image OCR or new multi-frame TIFF import.</p>
-      <button type="button" className={styles.secondaryBtn} disabled={busy || query.isFetching} onClick={() => void query.refetch()}>Refresh collection</button>
+  return <div className={unifiedStyles.result}>
+    <section>
+      <h2>Resultado · {collection?.title ?? "Cargando…"}</h2>
+      <button type="button" className={unifiedStyles.secondary} disabled={busy || query.isFetching} onClick={() => void query.refetch()}>Actualizar resultado</button>
       {query.isPending && <p role="status">Loading collection…</p>}
       {query.error instanceof Error && <p role="alert" className={styles.error}>{query.error.message}</p>}
       {collection && <>
-        <p role="status">{issues.length ? "Segments need attention" : "All segments ready with matching mnemonic and units"}</p>
+        <p role="status">{issues.length ? "Tramos requieren atención" : "Tramos listos, mnemónico y unidades compatibles"}</p>
         {issues.length > 0 && <ul>{issues.map((issue) => <li key={issue} className={styles.error}>{issue}</li>)}</ul>}
-        {collection.segments.map((segment) => <SegmentRow key={segment.job_id} segment={segment} collection={collection} busy={busy} />)}
-        <p className={styles.hint}>Open any segment to add a continuation from the original. Saved edits, tiles and curves are kept by job ID, never by the active selection.</p>
+        <table className={unifiedStyles.ranges}><thead><tr><th>Tramo</th><th>Profundidad</th><th title="Filas recuperadas por el modelo; no mide exactitud ni identidad de la traza.">Filas recuperadas</th></tr></thead><tbody>
+          {collection.segments.map((segment) => <tr key={`range:${segment.job_id}`}><td>{segment.label}</td><td>{segment.job.calibration ? `${segment.job.calibration.depth_top} – ${segment.job.calibration.depth_bottom} ${segment.job.calibration.depth_unit}` : "Sin calibrar"}</td><td>{segment.job.quality ? `${(segment.job.quality.coverage * 100).toFixed(1)}%` : "Pendiente"}</td></tr>)}
+        </tbody></table>
+        <p className={unifiedStyles.muted}>Filas recuperadas no equivale a exactitud: revisá la traza sobre el escaneo.</p>
+        {gaps.map(([top, end]) => <p className={unifiedStyles.notice} key={`gap:${top}:${end}`}>Hueco {top} – {end}: se conserva como NULL.</p>)}
+        <CombinedCurvePlot collection={collection} />
       </>}
-    </SectionPanel>
+    </section>
 
     {collection && <>
-      <SectionPanel title="Overlaps — explicit segment choice required">
-        <p className={styles.intro}>Choose which segment to keep for EACH interval. No averaging, automatic priority or default selection. Gaps between segments remain NULL; no interpolation across page separations.</p>
-        {!collection.overlaps.length && <p>No overlaps reported for the current configuration.</p>}
+      <aside className={unifiedStyles.resultInspector}>
+      <section><h2>Solapes</h2>
+        <p className={unifiedStyles.muted}>Elegí qué tramo conservar en cada intervalo. Sin promedios ni selección automática.</p>
+        {!collection.overlaps.length && <p className={unifiedStyles.muted}>No hay solapes.</p>}
         {collection.overlaps.map((overlap) => <div className={styles.field} key={overlap.conflict_id}>
-          <label className={styles.label} htmlFor={`overlap-${overlap.conflict_id}`}>{overlap.depth_top} – {overlap.depth_bottom} {collection.segments[0]?.job.calibration?.depth_unit} — keep segment</label>
+          <label className={styles.label} htmlFor={`overlap-${overlap.conflict_id}`}>{overlap.depth_top} – {overlap.depth_bottom} {collection.segments[0]?.job.calibration?.depth_unit} · conservar</label>
           <select id={`overlap-${overlap.conflict_id}`} className={styles.input} required disabled={busy} value={currentDraft.choices[overlap.conflict_id] ?? ""} onChange={(event) => {
             setDraft({ ...currentDraft, choices: { ...currentDraft.choices, [overlap.conflict_id]: event.target.value } });
           }}>
-            <option value="">Choose a segment explicitly…</option>
-            {overlap.job_ids.map((jobId) => <option value={jobId} key={jobId}>{collection.segments.find((segment) => segment.job_id === jobId)?.label ?? jobId}</option>)}
+            <option value="">Elegir tramo…</option>
+            {overlap.job_ids.map((jobId) => <option value={jobId} key={`choice:${overlap.conflict_id}:${jobId}`}>{collection.segments.find((segment) => segment.job_id === jobId)?.label ?? "Tramo no disponible"}</option>)}
           </select>
         </div>)}
-        {missing.length > 0 && <p className={styles.notice}>{missing.length} overlap choice(s) still required. Export and analysis are disabled.</p>}
+        {missing.length > 0 && <p className={styles.notice}>{missing.length} solape(s) requieren una elección antes de descargar o analizar.</p>}
         {storageError && <p role="alert" className={styles.error}>{storageError}</p>}
-      </SectionPanel>
+      </section>
 
-      <SectionPanel title="Optional LAS header">
-        <p className={styles.intro}>Leave unknown fields blank. The collection title is not used as an invented well name.</p>
+      <details className={unifiedStyles.help}><summary>Cabecera LAS (opcional)</summary>
+        <p>Dejá vacíos los datos desconocidos. El archivo no se usa como nombre de pozo.</p>
         <div className={styles.fieldGrid}>{(Object.keys(HEADER_LABELS) as Array<keyof LasHeaderFields>).map((key) => <div className={styles.field} key={key}>
           <label className={styles.label} htmlFor={`collection-header-${key}`}>{HEADER_LABELS[key]}</label>
           <input id={`collection-header-${key}`} className={styles.input} disabled={busy} value={header[key]} onChange={(event) => setHeader({ ...header, [key]: event.target.value })} />
         </div>)}</div>
-      </SectionPanel>
+      </details>
 
-      <SectionPanel title="Combined output">
-        <p>{collection.segments[0]?.job.calibration?.mnemonic} ({collection.segments[0]?.job.calibration?.value_unit}) — common units required. Uniform increasing depth; missing values and segment gaps remain NULL. Backend checks revision and output size.</p>
+      <section><h2>Una curva · una salida</h2>
+        <p className={unifiedStyles.muted}>{collection.segments[0]?.job.calibration?.mnemonic} ({collection.segments[0]?.job.calibration?.value_unit}) · Profundidad creciente, huecos NULL.</p>
         <div className={styles.field}>
-          <label className={styles.label} htmlFor="collection-depth-step">Depth step ({collection.segments[0]?.job.calibration?.depth_unit ?? "not calibrated"})</label>
+          <label className={styles.label} htmlFor="collection-depth-step">Paso de profundidad ({collection.segments[0]?.job.calibration?.depth_unit ?? "sin calibrar"})</label>
           <input id="collection-depth-step" className={styles.input} type="number" min="0" step="any" disabled={busy} value={step} onChange={(event) => setStep(Number(event.target.value))} />
         </div>
         {outputIssue && <p role="alert" className={styles.error}>{outputIssue}</p>}
+        {preferencesError && <p role="alert" className={styles.error}>{preferencesError}</p>}
         {[download.error, analyze.error].map((error, index) => error instanceof Error && <p role="alert" className={styles.error} key={index}>{error.message}</p>)}
         <div className={styles.actions}>
-          <button type="button" className={styles.secondaryBtn} disabled={disabled} onClick={() => analyze.mutate(request)}>{analyze.isPending ? "Analyzing…" : "Analyze collection in LASight"}</button>
-          <button type="button" className={styles.primaryBtn} disabled={disabled} onClick={() => download.mutate(request)}>{download.isPending ? "Building…" : "Download combined LAS"}</button>
+          <button type="button" className={unifiedStyles.secondary} disabled={disabled} onClick={() => analyze.mutate(request)}>{analyze.isPending ? "Analizando…" : "Analizar curva"}</button>
+          <button type="button" className={unifiedStyles.primary} disabled={disabled} onClick={() => download.mutate(request)}>{download.isPending ? "Generando…" : "Descargar LAS"}</button>
         </div>
-      </SectionPanel>
+      </section>
+      {preview && <details open><summary>Vista previa LAS</summary><pre className={unifiedStyles.preview}>{preview.split("\n").slice(0, 40).join("\n")}</pre></details>}
+      </aside>
     </>}
-    {preview && <SectionPanel title="Combined LAS preview"><p className={styles.hint}>First 40 lines of the downloaded file.</p><pre className={exportStyles.preview}>{preview.split("\n").slice(0, 40).join("\n")}</pre></SectionPanel>}
-  </main>;
-}
-
-function SegmentRow({ segment, collection, busy }: {
-  segment: CollectionSummary["segments"][number]; collection: CollectionSummary; busy: boolean;
-}) {
-  const client = useQueryClient();
-  const [label, setLabel] = useState(segment.label);
-  useEffect(() => setLabel(segment.label), [segment.label]);
-  const update = useMutation({
-    mutationFn: (action: "rename" | "detach") => action === "rename"
-      ? collectionGateway.renameSegment(collection.collection_id, segment.job_id, label.trim())
-      : collectionGateway.detachSegment(collection.collection_id, segment.job_id),
-    onSuccess: (result) => {
-      client.setQueryData(collectionQueryKey(result.collection_id), result);
-      void client.invalidateQueries({ queryKey: jobQueryKey(segment.job_id) });
-      void client.invalidateQueries({ queryKey: ["history"] });
-    },
-  });
-  return <div className={styles.field}>
-    <Link to={`/digitize/${encodeURIComponent(segment.job_id)}/${stepForPhase(segment.job.phase)}`}>{segment.label} — {segment.job.phase}</Link>
-    <p className={styles.hint}>{segment.job.calibration ? `${segment.job.calibration.depth_top} – ${segment.job.calibration.depth_bottom} ${segment.job.calibration.depth_unit}; ${segment.job.calibration.mnemonic} (${segment.job.calibration.value_unit})` : "Not calibrated"}</p>
-    <div className={styles.actions}>
-      <label htmlFor={`segment-label-${segment.job_id}`}>Segment label</label>
-      <input id={`segment-label-${segment.job_id}`} className={styles.input} disabled={busy || update.isPending} value={label} onChange={(event) => setLabel(event.target.value)} />
-      <button type="button" className={styles.secondaryBtn} disabled={busy || update.isPending || !label.trim() || label.trim() === segment.label} onClick={() => update.mutate("rename")}>Rename</button>
-      <button type="button" className={styles.secondaryBtn} disabled={busy || update.isPending || collection.segments.length <= 1} onClick={() => {
-        if (window.confirm(`Detach ${segment.label}? Its saved job will remain in My Files.`)) update.mutate("detach");
-      }}>Detach (keep saved job)</button>
-    </div>
-    {update.error instanceof Error && <p role="alert" className={styles.error}>{update.error.message}</p>}
   </div>;
 }

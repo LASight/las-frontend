@@ -81,6 +81,15 @@ describe("Review → Export and reload", () => {
     vi.unstubAllGlobals();
   });
 
+  it("offers only the unified result for a member, never individual download or analysis", async () => {
+    controller.job = { ...job(), collection_id: "curve" };
+    await render("export");
+    expect(host.querySelectorAll("button")).toHaveLength(0);
+    expect(host.querySelector("a")?.getAttribute("href")).toBe("/digitize/curves/curve?segment=job&view=result");
+    expect(digitizationGateway.exportLas).not.toHaveBeenCalled();
+    expect(digitizationGateway.sendToAnalysis).not.toHaveBeenCalled();
+  });
+
   it("uses the shared corrected snapshot for Download and Analyze after navigation", async () => {
     await render("review");
     await act(async () => {

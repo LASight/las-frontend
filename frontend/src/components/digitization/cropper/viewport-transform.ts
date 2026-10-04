@@ -28,6 +28,14 @@ export interface ViewTransform {
   ty: number;
 }
 
+/** Bounds in original image pixels. This transform never changes the region. */
+export interface FocusRegion {
+  x_left: number;
+  x_right: number;
+  y_top: number;
+  y_bottom: number;
+}
+
 /**
  * Zoom bounds.
  *
@@ -148,6 +156,31 @@ export function clampView(
 export function initialView(image: Size, viewport: Size): ViewTransform {
   const scale = fitWidthScale(image, viewport);
   return clampView({ scale, tx: 0, ty: 0 }, image, viewport);
+}
+
+/** Read the beginning of a tall selected track, not a shrunken whole-track
+ * overview. Scale depends ONLY on width + neighbouring scan context (e.g.
+ * printed depth labels). Vertical alignment starts just above the first row.
+ * Context is in source pixels; margin is in screen pixels. Image boundaries
+ * may reduce the requested margins, but clamping must never change the scale. */
+export function focusRegionStart(
+  region: FocusRegion,
+  image: Size,
+  viewport: Size,
+  { horizontalContext = 120, topContext = 60, margin = 24 } = {}
+): ViewTransform {
+  if (image.width <= 0 || image.height <= 0 || viewport.width <= 0 || viewport.height <= 0 ||
+    ![region.x_left, region.x_right, region.y_top, region.y_bottom].every(Number.isFinite) ||
+    region.x_right <= region.x_left || region.y_bottom <= region.y_top) return initialView(image, viewport);
+  const left = Math.max(0, region.x_left - horizontalContext);
+  const right = Math.min(image.width, region.x_right + horizontalContext);
+  const width = Math.max(1, right - left);
+  const scale = clampScale(Math.max(1, viewport.width - 2 * margin) / width);
+  return clampView({
+    scale,
+    tx: viewport.width / 2 - (left + right) / 2 * scale,
+    ty: margin - Math.max(0, region.y_top - topContext) * scale,
+  }, image, viewport);
 }
 
 /** Translate by a screen-space delta, then re-clamp. */

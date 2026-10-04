@@ -22,6 +22,7 @@ import {
 } from "./crop-rect";
 import { useLodTiles } from "./use-lod-tiles";
 import { ZOOM_STEP, usePanZoom } from "./use-pan-zoom";
+import { useSavedCropFocus } from "./use-saved-crop-focus";
 import type { Point } from "./viewport-transform";
 import { screenToImage } from "./viewport-transform";
 
@@ -71,6 +72,11 @@ type Props = {
    * be free to clobber a drag that has, from the user's perspective, already
    * begun. */
   onDragStart?: () => void;
+  /** Confirmed manual crops of the same original, not layout proposals. */
+  otherSelections?: Array<{ id: string; label: string; crop: TrackCrop }>;
+  compact?: boolean;
+  /** Unified workspace only: focus saved crops on mount/change, never drafts. */
+  focusSavedCropStart?: boolean;
 };
 
 /** Arrow-key nudge, in image pixels. Shift multiplies it. */
@@ -89,6 +95,9 @@ export function TrackCropper({
   selectedTrackIndex = null,
   onSelectTrack,
   onDragStart,
+  otherSelections = [],
+  compact = false,
+  focusSavedCropStart = false,
 }: Props) {
   const stageRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -108,6 +117,8 @@ export function TrackCropper({
 
   const pan = usePanZoom({ image, viewport, targetRef: stageRef });
   const { view } = pan;
+  useSavedCropFocus({ enabled: focusSavedCropStart, jobId: job.job_id,
+    savedCrop: job.crop, viewport, focus: pan.focusRegionStart });
 
   const { tiles, error, isLoading, retry } = useLodTiles({
     jobId: job.job_id,
@@ -316,8 +327,9 @@ export function TrackCropper({
   const cursor = cursorForHandle(activeHandle ?? hoverHandle);
 
   return (
-    <div className={styles.wrapper}>
+    <div className={`${styles.wrapper} ${focusSavedCropStart ? styles.focusContext : ""}`}>
       <div className={styles.toolbar}>
+        {focusSavedCropStart && <button id="focus-segment-start" type="button" disabled={viewport.width <= 0 || viewport.height <= 0} onClick={() => pan.focusRegionStart(crop)}>Inicio del tramo</button>}
         <button type="button" onClick={() => pan.zoomBy(1 / ZOOM_STEP)} title="Zoom out">
           −
         </button>
@@ -391,6 +403,11 @@ export function TrackCropper({
             />
           )}
 
+          {otherSelections.map((selection) => {
+            const bounds = cropToScreen(selection.crop, view);
+            return <div key={`confirmed-crop:${selection.id}`} className={styles.otherSelection} style={{ left: bounds.left, top: bounds.top, width: bounds.right - bounds.left, height: bounds.bottom - bounds.top }}><span>{selection.label}</span></div>;
+          })}
+
           <div
             className={styles.selection}
             style={{
@@ -451,12 +468,12 @@ export function TrackCropper({
           />
         </div>
 
-      <p className={styles.hint}>
+      {!compact && <p className={styles.hint}>
         Drag the image to pan, scroll to zoom at the pointer, double-click to zoom
         in. Drag a handle to set an edge; arrow keys nudge it by one pixel, Shift
         by {NUDGE_COARSE_PX}. Panning and zooming never change the selection —
         the four numbers above are raster pixels of the original scan.
-      </p>
+      </p>}
     </div>
   );
 }

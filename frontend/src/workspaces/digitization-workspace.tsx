@@ -1,4 +1,4 @@
-import { Outlet, useLocation, useParams } from "react-router-dom";
+import { Navigate, Outlet, useLocation, useParams } from "react-router-dom";
 
 import styles from "../app.module.css";
 import { SidebarPanel, useAppShell, useShellStatus } from "../app-shell-context";
@@ -35,6 +35,13 @@ export function DigitizationWorkspace() {
   const steps = describeSteps(job, currentStep);
 
   useShellStatus(describeJobStatus(job), isRunning(job) || controller.isLoading);
+
+  // Member deep links/My Files resolve to the unified curve, never an
+  // individual member export. Standalone saved jobs retain the legacy wizard.
+  if (job?.collection_id) {
+    const view = currentStep === "export" ? "result" : currentStep === "calibrate" ? "cal" : currentStep === "review" ? "review" : "crop";
+    return <Navigate to={`/digitize/curves/${encodeURIComponent(job.collection_id)}?segment=${encodeURIComponent(job.job_id)}&view=${view}`} replace />;
+  }
 
   return (
     <DigitizationJobProvider value={controller}>

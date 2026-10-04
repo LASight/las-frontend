@@ -63,7 +63,8 @@ function destinationFor(item: HistoryItem): string | null {
     const workspace = item.file_count > 1 ? "portfolio" : "analysis";
     return `/${workspace}?analysis=${item.item_id}`;
   }
-  if (item.analysis_id) return `/analysis?analysis=${item.analysis_id}`;
+  // Resolve raster membership from its job. History has no collection_id;
+  // opening analysis first would bypass the unified workspace for members.
   return `/digitize/${item.item_id}`;
 }
 
@@ -179,6 +180,7 @@ export function HistoryWorkspace() {
                           {(item.quality * 100).toFixed(0)}% coverage
                         </span>
                       )}
+                      {item.kind === "raster" && item.analysis_id && <Link to={`/analysis?analysis=${encodeURIComponent(item.analysis_id)}`}>Open analysis</Link>}
                     </span>
                   </div>
 

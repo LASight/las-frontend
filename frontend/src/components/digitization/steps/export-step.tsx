@@ -1,6 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 import { useCurveReview } from "../../../hooks/use-curve-review";
 import {
@@ -87,6 +87,10 @@ export function ExportStep() {
   });
 
   if (!job) return null;
+  if (job.collection_id) return <SectionPanel title="Una curva · una salida">
+    <p>Este tramo forma parte de una curva. La descarga y el análisis se realizan sobre el resultado conjunto.</p>
+    <Link to={`/digitize/curves/${encodeURIComponent(job.collection_id)}?segment=${encodeURIComponent(job.job_id)}&view=result`}>Abrir resultado de la curva</Link>
+  </SectionPanel>;
 
   const calibration = job.calibration;
   const quality = job.quality;
