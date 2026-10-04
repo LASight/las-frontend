@@ -4,21 +4,31 @@
 > [`las-backend`](../las-backend) repo and must be running for anything here to
 > work (or use [mock mode](#mock-mode)).
 
-Two workspaces, one product:
+Three workspaces, one product:
 
 | Workspace | Route | What it does |
 |---|---|---|
 | **Digitize Raster** (WellSight) | `/digitize` | Recovers a curve from a *scanned* well log and exports a CWLS 2.0 LAS file |
 | **LAS Analysis** (LASight) | `/analysis` | QC, petrophysics, ML/SOM, sequence stratigraphy and AI interpretation over LAS files that are already digital |
+| **Compare wells** | `/portfolio` | Side-by-side reported-depth LAS logs and the existing portfolio analytics; not automatic geological correlation |
 
-The two connect: at the end of a digitization, **Analyze in LASight** hands the
-exported LAS straight to the analysis workspace — no download and re-upload.
+The workflows connect: **Analyze curve** explicitly hands the joined digitized
+LAS to the analysis workspace — no download/re-upload or automatic analysis.
+The primary digitization route is `/digitize/curves/:collectionId`: one source
+document, independent segments, explicit overlap choices and one joint LAS.
+The independent-job wizard described below remains for legacy URLs.
+
+Current behavior/configuration: [unified workflow](docs/75-unified-digitization.md),
+[workstation UI](docs/75-geoscience-ui.md), [manual well comparison](docs/75-log-comparison.md),
+[segment removal](docs/75-remove-segment.md), and [selective branding](docs/75-brand-import.md).
+Final review: [concrete quality findings](docs/75-code-review.md) and
+[prepared PR scope / remaining gates](docs/75-final-pr.md).
 
 | Repo | Role |
 |---|---|
 | [`ORION`](../ORION) | The science. Synthetic generator, U-Net training, `mask → LAS` chain. |
 | [`las-backend`](../las-backend) | FastAPI service. Job lifecycle, tiles, background inference, LAS assembly. |
-| **`las-frontend`** (this repo) | React SPA. The wizard, the correction canvas, the analysis dashboards. |
+| **`las-frontend`** (this repo) | React SPA. Unified curve editing, correction canvases, LAS comparison and analysis dashboards. |
 
 Context: university final project (*Proyecto Final de Ingeniería*, UADE, 2026).
 Status: **working locally, not deployed.**
@@ -35,7 +45,7 @@ cd ../las-backend && uvicorn app.main:app --reload
 
 ```bash
 cd frontend
-npm install
+npm ci
 cp .env.example .env
 npm run dev
 ```
@@ -50,8 +60,20 @@ npm run dev
 
 ```bash
 npm run build     # tsc -b && vite build  → static assets in dist/
-npm test          # vitest — 125 tests, ~20 s
+npm test -- --run # unit and contract tests, not scientific accuracy evidence
 ```
+
+The dev server defaults to 5173; compiled preview defaults to 4173. Other ports
+are explicit CLI choices (`npm run preview -- --port 5177 --strictPort` for the
+isolated review). An optional `WELLSIGHT_DEV_API_PROXY` forwards `/api` only when
+configured; pair it with an explicitly empty `VITE_API_BASE_URL` at build time.
+Neither setting changes backend authentication/CORS. See `.env.example`.
+
+If the checkout path contains a literal `%`, the current Vite/Vitest resolver
+may throw `URIError` before collecting tests. Run tests through a safe symlink
+using `--root`; the local review alias is documented in the workstation UI note.
+Ordinary checkout paths do not need that workaround. TypeScript build caches,
+dependencies and compiled assets are local/generated, not reviewable source.
 
 ### Mock mode
 
@@ -68,7 +90,7 @@ step, and they are not digitization results.**
 
 ---
 
-## The digitization workspace
+## Legacy independent-job digitization
 
 A six-step wizard, each step a real URL under `/digitize/:jobId/…`:
 

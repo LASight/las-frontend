@@ -69,15 +69,31 @@ export function ReviewStep() {
           redraw where the model wandered, and discard anything you cannot verify —
           discarded depths export as NULL rather than as a guess.
         </p>
+        <p role="status">{review.isSaving ? "Saving corrections…" : review.hasUnsavedEdits ? "Corrections not saved." : "Corrections saved."}</p>
+        {review.hasLegacyDraft && <button type="button" disabled={review.isSaving || review.hasUnsavedEdits} onClick={() => {
+          if (window.confirm("Recover older local corrections after verifying access to this segment? The original draft and revision are retained. An existing account draft is never overwritten.")) void review.recoverLegacyEdits();
+        }}>Recover older corrections</button>}
+        {review.saveError && (
+          <p className={styles.error}>
+            {review.saveError}{" "}
+            <button type="button" onClick={() => { void review.flushEdits().catch(() => {}); }}>Retry saving</button>
+            {" "}<button type="button" disabled={review.isSaving} onClick={() => {
+              if (window.confirm("Discard this unsaved local draft and load the server's saved corrections?")) void review.restoreSavedEdits();
+            }}>Restore saved corrections</button>
+          </p>
+        )}
 
         <div className={reviewStyles.layout}>
           <div className={reviewStyles.canvasColumn}>
             <RasterViewport
               job={job}
               x={review.x}
+              edits={review.edits}
               gaps={review.gaps}
               tool={review.tool}
               showMask={review.showMask}
+              showPrediction={review.showPrediction}
+              predictionOpacity={review.predictionOpacity}
               onStroke={review.applyStroke}
               onDiscardRange={review.discardRange}
               registerJump={(fn) => {
@@ -93,6 +109,10 @@ export function ReviewStep() {
               onToolChange={review.setTool}
               showMask={review.showMask}
               onShowMaskChange={review.setShowMask}
+              showPrediction={review.showPrediction}
+              onShowPredictionChange={review.setShowPrediction}
+              predictionOpacity={review.predictionOpacity}
+              onPredictionOpacityChange={review.setPredictionOpacity}
               edits={review.edits}
               stats={review.stats}
               gaps={review.gaps}

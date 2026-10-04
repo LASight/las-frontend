@@ -13,6 +13,7 @@ import {
 import { NavLink, useNavigate } from "react-router-dom";
 
 import { useAuth } from "../auth-context";
+import { BrandMark } from "./brand-mark";
 import styles from "./sidebar.module.css";
 
 /**
@@ -50,7 +51,7 @@ const WORKSPACE_GROUPS: Array<{ label: string; items: Workspace[] }> = [
   {
     label: "MULTI-WELL",
     items: [
-      { to: "/portfolio", icon: ChartNoAxesCombined, label: "Portfolio Analytics" },
+      { to: "/portfolio", icon: ChartNoAxesCombined, label: "Compare wells" },
     ],
   },
   {
@@ -88,16 +89,17 @@ export function Sidebar({
   }
 
   return (
-    <nav className={`${styles.sidebar} ${collapsed ? styles.collapsed : ""}`}>
+    <nav aria-label="Workspaces" className={`${styles.sidebar} ${collapsed ? styles.collapsed : ""}`}>
       <div className={styles.sbTop}>
         <div className={styles.logoArea}>
-          <div className={styles.logoMark}>W</div>
+          <BrandMark className={styles.logoMark} decorative />
           <span className={styles.appName}>WellSight</span>
         </div>
         <button
           className={styles.collapseBtn}
           onClick={onCollapseToggle}
           title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
           {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
         </button>
@@ -115,6 +117,7 @@ export function Sidebar({
                   `${styles.workspaceLink} ${isActive ? styles.workspaceLinkActive : ""}`
                 }
                 title={collapsed ? label : undefined}
+                aria-label={label}
               >
                 <span className={styles.sbBtnIcon}><WorkspaceIcon size={17} /></span>
                 <span className={styles.sbBtnLabel}>{label}</span>
@@ -134,6 +137,7 @@ export function Sidebar({
               `${styles.accountLink} ${isActive ? styles.accountLinkActive : ""}`
             }
             title={collapsed ? user.email : "Account settings"}
+            aria-label="Account settings"
           >
             {/* The initial is the only thing that still reads when the sidebar
                 is 52px wide, which is why it is not just an icon. */}
@@ -153,6 +157,7 @@ export function Sidebar({
             className={styles.signOutBtn}
             onClick={handleSignOut}
             title="Sign out"
+            aria-label="Sign out"
           >
             <span className={styles.sbBtnIcon}><LogOut size={16} /></span>
             <span className={styles.sbBtnLabel}>Sign out</span>

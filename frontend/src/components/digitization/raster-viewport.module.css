@@ -15,7 +15,7 @@
   padding: 0.45rem 0.7rem;
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: var(--radius-panel);
   font-size: 0.8rem;
   color: var(--muted);
 }
@@ -36,10 +36,10 @@
 }
 
 .zoomControls button {
-  width: 26px;
+  min-width: 26px;
   height: 26px;
   border: 1px solid var(--line-strong);
-  border-radius: 6px;
+  border-radius: var(--radius-control);
   background: var(--surface);
   color: var(--ink);
   cursor: pointer;
@@ -96,10 +96,10 @@
   /* A fixed height rather than an aspect ratio: the viewport shows a depth
      window, so its height is how much log you can see at once, not a function
      of the image's dimensions. */
-  height: 62vh;
-  min-height: 320px;
+  height: var(--digitization-stage-height, 62vh);
+  min-height: var(--digitization-stage-min-height, 320px);
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: var(--radius-panel);
   overflow: hidden;
   background: var(--surface);
 }
@@ -120,10 +120,15 @@
   padding: 0.4rem 0.8rem;
   border-radius: 6px;
   font-size: 0.8rem;
-  background: rgba(255, 255, 255, 0.92);
+  background: var(--surface);
   border: 1px solid var(--line);
   color: var(--muted);
 }
+.legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 11px; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 5px; }
+.legend i { display: inline-block; width: 18px; height: 4px; border: 1px solid #fff; }
+.legend .maskSwatch { background: #9abdc9; height: 8px; border: 0; }
+.legend .nullSwatch { background: rgba(192,57,43,.5); height: 8px; border: 0; }
 
 .tileError {
   color: var(--danger);
@@ -151,6 +156,6 @@
 
 @media (max-width: 768px) {
   .canvasHost {
-    height: 50vh;
+    height: var(--digitization-stage-height, 50vh);
   }
 }

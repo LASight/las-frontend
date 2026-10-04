@@ -187,6 +187,9 @@ export function CropStep() {
           Digitize one track at a time. The model was trained on single gamma-ray
           tracks, so cropping to one is not just tidiness — feeding it a whole
           multi-track scan produces confident nonsense.
+          Layout boxes are only crop proposals: they do not identify all continuations,
+          read depth numbers or establish continuity. Confirm this segment's rectangle
+          here and enter its depth range manually in calibration.
         </p>
 
         <DetectionStatusChip
@@ -204,6 +207,7 @@ export function CropStep() {
         <TrackCropper
           job={job}
           crop={crop}
+          disabled={setCrop.isPending}
           onChange={setLocalCrop}
           detectedTracks={detectedTracks}
           selectedTrackIndex={selectedTrackIndex}

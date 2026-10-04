@@ -17,7 +17,7 @@
   font: inherit;
   padding: 0.25rem 0.6rem;
   border: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: var(--radius-control);
   background: var(--surface);
   color: inherit;
   cursor: pointer;
@@ -32,6 +32,9 @@
   opacity: 0.45;
   cursor: default;
 }
+.modes { display: flex; gap: 4px; }
+.modes button { display: inline-flex; align-items: center; gap: 5px; }
+.modes button[aria-pressed="true"] { border-color: var(--accent-teal); color: var(--ink); background: var(--surface-raised); }
 
 .zoomLabel {
   min-width: 5.5rem;
@@ -54,7 +57,8 @@
   display: flex;
   gap: 0.5rem;
   align-items: stretch;
-  height: 520px;
+  height: var(--digitization-stage-height, 62vh);
+  min-height: var(--digitization-stage-min-height, 420px);
 }
 
 .stage {
@@ -62,7 +66,7 @@
   flex: 1;
   min-width: 0;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: var(--radius-panel);
   overflow: hidden;
   background: var(--surface);
   /* The image is composited under the pointer; a text caret or a drag-selection
@@ -93,12 +97,18 @@
   pointer-events: none;
 }
 
+/* Unified focus retains readable depth labels just outside the GR selection. */
+.focusContext .shade { background: rgba(12, 18, 28, 0.18); }
+
 .selection {
   position: absolute;
   border: 1.5px solid var(--accent-teal);
   box-shadow: 0 0 0 1px rgba(12, 18, 28, 0.55);
   pointer-events: none;
 }
+
+.otherSelection { position: absolute; border: 1px dashed #eda95b; pointer-events: none; }
+.otherSelection span { position: absolute; top: 0; left: 0; color: #fff; background: #715127; padding: 2px 5px; border-radius: 2px; font-size: 11px; white-space: nowrap; }
 
 /* Rule-of-thirds guides, the standard cue that a rectangle is being composed. */
 .guide {

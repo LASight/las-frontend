@@ -7,5 +7,5 @@
   font-size: 0.83rem;
   border: 1px dashed var(--line-strong);
   border-radius: 12px;
-  background: #fafbfc;
+  background: var(--surface-inset);
 }

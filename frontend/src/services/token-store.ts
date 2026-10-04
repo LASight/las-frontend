@@ -18,6 +18,8 @@
  * stolen copy stops working the moment the real client refreshes.
  */
 
+import { endAccountSession } from "./session-scope";
+
 const REFRESH_KEY = "wellsight.refresh_token";
 
 let accessToken: string | null = null;
@@ -90,6 +92,7 @@ export function setSession(tokens: {
 
 /** Forget everything. Called on sign-out and on a refresh that fails. */
 export function clearSession(): void {
+  endAccountSession();
   accessToken = null;
   mediaToken = null;
   try {

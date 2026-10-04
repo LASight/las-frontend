@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import type { Point, Size, ViewTransform } from "./viewport-transform";
+import type { FocusRegion, Point, Size, ViewTransform } from "./viewport-transform";
 import {
   centerOnRow as centerViewOnRow,
   clampView,
   fitHeightScale,
   fitWidthScale,
+  focusRegionStart as focusViewRegionStart,
   initialView,
   panBy,
   zoomAt,
@@ -156,6 +157,13 @@ export function usePanZoom({
     [apply, image, viewport]
   );
 
+  /** Presentation only. apply writes viewRef synchronously, so this composes
+   * correctly after the measured-viewport initialization effect. */
+  const focusRegionStart = useCallback(
+    (region: FocusRegion) => apply(focusViewRegionStart(region, image, viewport)),
+    [apply, image, viewport]
+  );
+
   // ---- Panning ----------------------------------------------------------
   const beginPan = useCallback((point: Point) => {
     panOriginRef.current = point;
@@ -233,6 +241,7 @@ export function usePanZoom({
     fitWidth,
     fitHeight,
     centerOnRow,
+    focusRegionStart,
     reset,
   };
 }

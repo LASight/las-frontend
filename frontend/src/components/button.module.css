@@ -1,6 +1,6 @@
 .button {
   border: none;
-  border-radius: 8px;
+  border-radius: var(--radius-control);
   padding: 0.52rem 0.85rem;
   font-weight: 600;
   cursor: pointer;
@@ -20,13 +20,13 @@
 
 /* Primary action — solid blue */
 .primary {
-  background: #3d9ec8;
-  color: #ffffff;
+  background: var(--accent-teal);
+  color: #1e2a30;
 }
 
 /* Secondary action — subtle gray */
 .secondary {
-  background: #e8eef4;
+  background: var(--surface-raised);
   color: var(--ink);
   border: 1px solid var(--line-strong);
 }

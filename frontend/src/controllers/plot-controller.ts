@@ -2,28 +2,27 @@ import type { Layout } from "plotly.js";
 
 export const PLOT_LAYOUT_BASE: Partial<Layout> = {
   paper_bgcolor: "rgba(0,0,0,0)",
-  plot_bgcolor: "#f8f9fa",
-  font: { color: "#1e2533", family: "Space Grotesk, sans-serif" },
+  plot_bgcolor: "#24292e",
+  font: { color: "#c0c9d1", family: "IBM Plex Sans, sans-serif", size: 12 },
   margin: { l: 55, r: 25, t: 38, b: 45 },
 };
 
 /** Shared Plotly config — no logo, responsive resize. */
 export const PLOT_CONFIG = { displaylogo: false, responsive: true } as const;
 
-/** Grid line color used across every axis for light-background legibility. */
-export const GRID_COLOR = "rgba(30,37,51,0.11)";
+/** Quiet grids; data remains the dominant layer on workstation tracks. */
+export const GRID_COLOR = "#41494f";
 
 export const RAW_CURVE_ORDER = ["GR", "DT", "RESD", "SP", "RHOB", "NPHI"];
 
-// Colors follow loose industry conventions: GR=dark-green, NPHI=blue, RHOB=warm-orange,
-// RESD=sienna, DT=purple, SP=olive. All chosen for light-background legibility.
+// Distinct track colours for dark chart surfaces. Colour is not lithology or confidence.
 export const RAW_CURVE_COLOR: Record<string, string> = {
-  GR:   "#2d6a4f", // deep forest green  — GR is conventionally dark; green is standard in many platforms
-  DT:   "#6b3fa0", // medium purple       — sonic, distinct from NPHI blue and resistivity
-  RESD: "#9e3a1a", // brick sienna        — resistivity brown-red per Techlog/IP convention
-  SP:   "#5c6e22", // olive               — SP is GR-track companion; earthy tone
-  RHOB: "#b8510c", // burnt orange        — density warm-orange per universal Archie convention
-  NPHI: "#1a5ea8", // steel blue          — neutron porosity blue is a universal well-log standard
+  GR:   "#9fceb1",
+  DT:   "#c0a6e5",
+  RESD: "#e5a693",
+  SP:   "#ced68f",
+  RHOB: "#edbc79",
+  NPHI: "#83c3da",
 };
 
 // Traffic-light convention: green=best, amber=caution, gray=low, red=risk

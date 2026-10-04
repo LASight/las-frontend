@@ -101,13 +101,17 @@ export function addEdit(edits: readonly CurveEdit[], edit: CurveEdit): CurveEdit
  * @returns A `redraw` edit, or `null` if the stroke covers no rows.
  */
 export function strokeToEdit(
-  samples: ReadonlyArray<{ row: number; x: number }>
+  samples: ReadonlyArray<{ row: number; x: number }>,
+  bounds?: { rows: number; width: number }
 ): CurveEdit | null {
-  if (samples.length === 0) return null;
+  const finite = samples.filter(({ row, x }) => Number.isFinite(row) && Number.isFinite(x));
+  if (finite.length === 0) return null;
+  if (bounds && (bounds.rows <= 0 || bounds.width <= 0 ||
+    !finite.some(({ x }) => x >= 0 && x < bounds.width))) return null;
 
-  const sorted = [...samples].sort((a, b) => a.row - b.row);
-  const y0 = Math.floor(sorted[0].row);
-  const y1 = Math.floor(sorted[sorted.length - 1].row) + 1;
+  const sorted = [...finite].sort((a, b) => a.row - b.row);
+  const y0 = Math.max(bounds ? 0 : -Infinity, Math.floor(sorted[0].row));
+  const y1 = Math.min(bounds?.rows ?? Infinity, Math.floor(sorted[sorted.length - 1].row) + 1);
   if (y1 <= y0) return null;
 
   const xByRow: number[] = new Array(y1 - y0);
@@ -129,7 +133,18 @@ export function strokeToEdit(
     xByRow[y - y0] = current.x + t * (next.x - current.x);
   }
 
-  return { kind: "redraw", y0, y1, x_by_row: xByRow };
+  // Interpolate using the original samples before clipping: trimming a stroke
+  // at the edge must not flatten its valid in-crop portion. Only manual input
+  // is bounded; model unwrap values are left completely unchanged.
+  return { kind: "redraw", y0, y1, x_by_row: bounds
+    ? xByRow.map((x) => Math.max(0, Math.min(bounds.width - 1, x))) : xByRow };
+}
+
+export function boundedRowRange(y0: number, y1: number, rows: number): [number, number] | null {
+  if (![y0, y1, rows].every(Number.isFinite) || rows <= 0) return null;
+  const start = Math.max(0, Math.min(rows, Math.floor(y0)));
+  const end = Math.max(0, Math.min(rows, Math.ceil(y1)));
+  return end > start ? [start, end] : null;
 }
 
 export interface EditStats {

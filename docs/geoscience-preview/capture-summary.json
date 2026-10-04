@@ -1,0 +1,67 @@
+{
+  "mode": "Read-only frozen existing API responses; not scientific validation",
+  "capturedAt": "2026-10-04T06:35:48.909Z",
+  "collectionId": "11f81b19-2f53-475f-b57e-9b8585436854",
+  "segments": [
+    {
+      "label": "REPEAT · pass5.5",
+      "job_id": "85f36b39-ea2c-49aa-a652-539e5d29d719",
+      "crop": {
+        "x_left": 25,
+        "x_right": 528,
+        "y_top": 14662,
+        "y_bottom": 16692
+      },
+      "calibration": {
+        "value_min": 0,
+        "value_max": 150,
+        "depth_top": 3450,
+        "depth_bottom": 3650,
+        "scale": "linear",
+        "depth_unit": "FT",
+        "value_unit": "GAPI",
+        "mnemonic": "GR"
+      },
+      "corrections": 0
+    },
+    {
+      "label": "MAIN · pass6.6",
+      "job_id": "f23fd4f1-2b57-4cbc-befd-6cfbce5457f1",
+      "crop": {
+        "x_left": 25,
+        "x_right": 528,
+        "y_top": 2717,
+        "y_bottom": 13374
+      },
+      "calibration": {
+        "value_min": 0,
+        "value_max": 150,
+        "depth_top": 2600,
+        "depth_bottom": 3650,
+        "scale": "linear",
+        "depth_unit": "FT",
+        "value_unit": "GAPI",
+        "mnemonic": "GR"
+      },
+      "corrections": 1
+    }
+  ],
+  "files": [
+    "segment-1-crop.png",
+    "segment-1-cal.png",
+    "segment-1-review.png",
+    "segment-1-result.png",
+    "segment-2-crop.png",
+    "segment-2-review.png",
+    "review-inspector-collapsed.png",
+    "metadata-options.png",
+    "review-dpr-2.png"
+  ],
+  "blockedWrites": 0,
+  "browserErrorCount": 0,
+  "canvasDpr": {
+    "devicePixelRatio": 2,
+    "backingWidth": 1912,
+    "cssWidth": 956
+  }
+}

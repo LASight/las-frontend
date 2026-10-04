@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 
 import styles from "../app.module.css";
@@ -40,16 +40,21 @@ export function AnalysisWorkspace() {
   const { collapsed } = useAppShell();
   const location = useLocation();
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
 
   const [demoMode, setDemoMode] = useState(false);
   const [assistantOpen, setAssistantOpen] = useState(false);
   const queryClient = useQueryClient();
+  const adoptingId = useRef<string | null>(null);
 
   const analysis = useAnalysis({
     scope: "single",
-    onNewAnalysis: () => {
+    onNewAnalysis: (nextPayload) => {
+      adoptingId.current = nextPayload.analysis_id;
       void queryClient.invalidateQueries({ queryKey: ["history"] });
+      if (nextPayload.analysis_id && searchParams.get("analysis") !== nextPayload.analysis_id) {
+        navigate(`/analysis?analysis=${encodeURIComponent(nextPayload.analysis_id)}`, { replace: true });
+      }
     },
   });
   const recentAnalyses = useQuery({
@@ -84,18 +89,17 @@ export function AnalysisWorkspace() {
     chat.resetForAnalysis();
     sequence.resetForAnalysis();
     sequenceAi.resetForAnalysis();
-    navigate("/analysis", { replace: true });
   }, [analysis.payload?.analysis_id]);
 
   // Handoff from the digitization workspace: `?analysis=<id>` means the backend
   // already ran the analysis on a freshly exported LAS, so adopt it rather than
   // making the user re-upload the file they just produced. The parameter is
-  // cleared once consumed so a refresh does not re-adopt a stale id.
+  // retained in the URL: a page reload must rehydrate that same saved analysis.
   const adoptedId = searchParams.get("analysis");
   useEffect(() => {
-    if (!adoptedId) return;
+    if (!adoptedId || adoptingId.current === adoptedId) return;
+    adoptingId.current = adoptedId;
     void analysis.adoptAnalysis(adoptedId);
-    setSearchParams({}, { replace: true });
   }, [adoptedId]);
 
   async function runDemoMode() {
@@ -152,7 +156,7 @@ export function AnalysisWorkspace() {
           loading={recentAnalyses.isPending}
           onSelect={(analysisId) => {
             if (analysisId && analysisId !== payload?.analysis_id) {
-              void analysis.adoptAnalysis(analysisId);
+              navigate(`/analysis?analysis=${encodeURIComponent(analysisId)}`);
             }
           }}
         />

@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type { TileLayer } from "../../../models/digitization-models";
 import { loadImage } from "../../../hooks/tile-loader";
-import { digitizationGateway } from "../../../services/digitization-service";
+import { digitizationGateway, tileCredentialKey } from "../../../services/digitization-service";
 import type { LodTileSpec } from "./lod-grid";
 import { levelForScale, lodGridRange, lodTilesForRange } from "./lod-grid";
 import type { Size, ViewTransform } from "./viewport-transform";
@@ -62,10 +62,18 @@ export function useLodTiles({
   origin,
   layer = "raster",
 }: Options) {
-  const cacheRef = useRef(new Map<string, LodTile>());
-  const pendingRef = useRef(new Set<string>());
+  const credential = tileCredentialKey();
+  // A request belongs to a pyramid, not to one render of the viewport. Panning
+  // must not discard a request another render is still waiting for.
+  const pyramid = useMemo(() => ({
+    cache: new Map<string, LodTile>(),
+    pending: new Set<string>(),
+    failures: new Map<string, number>(),
+    errors: new Map<string, string>(),
+    needed: new Set<string>(),
+  }), [jobId, layer, origin?.x, origin?.y, image.width, image.height, credential]);
+  const active = useRef(false);
   const [version, setVersion] = useState(0);
-  const [error, setError] = useState<string | null>(null);
 
   const level = levelForScale(view.scale);
   const originX = origin?.x ?? 0;
@@ -105,72 +113,57 @@ export function useLodTiles({
     ]
   );
 
+  pyramid.needed = new Set(needed.map((tile) => tile.key));
   useEffect(() => {
-    if (!jobId || needed.length === 0) return;
-    let cancelled = false;
+    active.current = true;
+    return () => { active.current = false; };
+  }, []);
 
-    async function fetchMissing() {
-      const cache = cacheRef.current;
-      const pending = pendingRef.current;
-      const missing = needed.filter(
-        (tile) => !cache.has(tile.key) && !pending.has(tile.key)
-      );
-      if (missing.length === 0) return;
-
-      await Promise.all(
-        missing.map(async (tile) => {
-          pending.add(tile.key);
-          try {
-            // Request in absolute raster coordinates; the tile keeps its
-            // region-local rect, which is the space the canvas draws in.
-            const url = digitizationGateway.tileUrl(jobId as string, {
-              x0: tile.sourceX0,
-              x1: tile.sourceX1,
-              y0: tile.sourceY0,
-              y1: tile.sourceY1,
-              scale: 1 / 2 ** tile.level,
-              layer,
-            });
-            if (!url) return;
-            const bitmap = await loadImage(url);
-            if (!cancelled) cache.set(tile.key, { ...tile, bitmap });
-          } catch (err) {
-            if (!cancelled) {
-              setError(err instanceof Error ? err.message : "Tile failed to load.");
-            }
-          } finally {
-            pending.delete(tile.key);
+  useEffect(() => {
+    if (!jobId) return;
+    const { cache, pending, failures, errors } = pyramid;
+    for (const tile of needed) {
+      if (cache.has(tile.key) || pending.has(tile.key) || (failures.get(tile.key) ?? 0) >= 3) continue;
+      pending.add(tile.key);
+      void (async () => {
+        let retryDelay = 0;
+        try {
+          const url = digitizationGateway.tileUrl(jobId, {
+            x0: tile.sourceX0, x1: tile.sourceX1,
+            y0: tile.sourceY0, y1: tile.sourceY1,
+            scale: 1 / 2 ** tile.level, layer,
+          });
+          if (!url) throw new Error("Tile URL unavailable.");
+          const bitmap = await loadImage(url);
+          cache.set(tile.key, { ...tile, bitmap });
+          failures.delete(tile.key);
+          errors.delete(tile.key);
+          while (cache.size > MAX_CACHED_TILES) {
+            const key = [...cache.keys()].find((key) => !pyramid.needed.has(key));
+            if (key === undefined) break;
+            cache.delete(key);
           }
-        })
-      );
-
-      if (cancelled) return;
-
-      // Evict oldest-first, but never something the viewport currently needs.
-      // Map preserves insertion order, which is close enough to LRU here.
-      const keep = new Set(needed.map((tile) => tile.key));
-      while (cache.size > MAX_CACHED_TILES) {
-        const evictable = [...cache.keys()].find((key) => !keep.has(key));
-        if (evictable === undefined) break;
-        cache.delete(evictable);
-      }
-
-      setVersion((n) => n + 1);
+        } catch (err) {
+          const attempts = (failures.get(tile.key) ?? 0) + 1;
+          failures.set(tile.key, attempts);
+          errors.set(tile.key, err instanceof Error ? err.message : "Tile failed to load.");
+          if (attempts < 3) retryDelay = 250 * attempts;
+        } finally {
+          // Keep the key pending during backoff, preventing render-driven
+          // retry storms. Settling always schedules the next eligible request.
+          if (retryDelay) await new Promise((resolve) => setTimeout(resolve, retryDelay));
+          pending.delete(tile.key);
+          if (active.current) setVersion((n) => n + 1);
+        }
+      })();
     }
+  }, [jobId, needed, layer, pyramid, version]);
 
-    void fetchMissing();
-    return () => {
-      cancelled = true;
-    };
-  }, [jobId, needed, layer, originX, originY]);
-
-  // A different job or layer invalidates the whole pyramid.
-  useEffect(() => {
-    cacheRef.current = new Map();
-    pendingRef.current = new Set();
-    setError(null);
+  const retry = useCallback(() => {
+    pyramid.failures.clear();
+    pyramid.errors.clear();
     setVersion((n) => n + 1);
-  }, [jobId, layer, originX, originY]);
+  }, [pyramid]);
 
   /**
    * Everything drawable that overlaps the view, coarsest level first.
@@ -182,16 +175,17 @@ export function useLodTiles({
   const tiles = useMemo(() => {
     const rect = visibleImageRect(view, image, viewport);
     const out: LodTile[] = [];
-    for (const tile of cacheRef.current.values()) {
+    for (const tile of pyramid.cache.values()) {
       if (tile.x1 <= rect.x0 || tile.x0 >= rect.x1) continue;
       if (tile.y1 <= rect.y0 || tile.y0 >= rect.y1) continue;
       out.push(tile);
     }
     return out.sort((a, b) => b.level - a.level);
     // `version` is what makes a newly arrived tile show up.
-  }, [version, view, image, viewport]);
+  }, [version, view, image, viewport, pyramid]);
 
-  const ready = tiles.some((tile) => tile.level === level);
-
-  return { tiles, level, error, isLoading: !ready && needed.length > 0 };
+  const error = needed.map((tile) => pyramid.errors.get(tile.key)).find(Boolean) ?? null;
+  const isLoading = needed.some((tile) => !pyramid.cache.has(tile.key) &&
+    (pyramid.pending.has(tile.key) || (pyramid.failures.get(tile.key) ?? 0) < 3));
+  return { tiles, level, error, isLoading, retry };
 }

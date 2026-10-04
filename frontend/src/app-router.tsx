@@ -14,6 +14,8 @@ import { SegmentationStep } from "./components/digitization/steps/segmentation-s
 import { AccountWorkspace } from "./workspaces/account-workspace";
 import { AnalysisWorkspace } from "./workspaces/analysis-workspace";
 import { DigitizationWorkspace } from "./workspaces/digitization-workspace";
+import { CollectionWorkspace } from "./workspaces/collection-workspace";
+import { CurveWorkspace } from "./workspaces/curve-workspace";
 import { HistoryWorkspace } from "./workspaces/history-workspace";
 import { PortfolioWorkspace } from "./workspaces/portfolio-workspace";
 
@@ -58,6 +60,8 @@ export const router = createBrowserRouter([
 
       { path: "digitize", element: <Navigate to="/digitize/new" replace /> },
       { path: "digitize/new", element: <IntakeStep /> },
+      { path: "digitize/collections/:collectionId", element: <CollectionWorkspace /> },
+      { path: "digitize/curves/:collectionId", element: <CurveWorkspace /> },
       {
         path: "digitize/:jobId",
         element: <DigitizationWorkspace />,

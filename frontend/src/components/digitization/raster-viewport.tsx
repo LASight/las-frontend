@@ -8,7 +8,9 @@ import {
 } from "../../controllers/calibration-controller";
 import type { ReviewTool } from "../../hooks/use-curve-review";
 import type { CurveSeries } from "../../controllers/curve-edit-controller";
-import type { JobSummary } from "../../models/digitization-models";
+import type { CurveEdit, JobSummary } from "../../models/digitization-models";
+import { drawCurveOverlay, overlayRuns, REVIEW_OVERLAY_STYLE } from "./curve-overlay";
+import { useTemporaryPan } from "./cropper/use-temporary-pan";
 import { useLodTiles } from "./cropper/use-lod-tiles";
 import { ZOOM_STEP, usePanZoom } from "./cropper/use-pan-zoom";
 import {
@@ -57,10 +59,14 @@ type Props = {
   job: JobSummary;
   /** Corrected curve in crop-local pixel columns; `null` marks unrecovered. */
   x: CurveSeries;
+  /** Live append-only corrections, for visual provenance only. */
+  edits?: readonly CurveEdit[];
   /** Unrecovered runs after corrections, in crop-local rows. */
   gaps: Array<{ y0: number; y1: number }>;
   tool: ReviewTool;
   showMask: boolean;
+  showPrediction?: boolean;
+  predictionOpacity?: number;
   onStroke: (samples: ReadonlyArray<{ row: number; x: number }>) => void;
   onDiscardRange: (y0: number, y1: number) => void;
   /**
@@ -75,7 +81,6 @@ type Props = {
 };
 
 const COLORS = {
-  curve: "#0f766e",
   mask: "rgba(56, 185, 217, 0.45)",
   gapBand: "rgba(192, 57, 43, 0.14)",
   axis: "rgba(30, 37, 51, 0.35)",
@@ -85,9 +90,12 @@ const COLORS = {
 export function RasterViewport({
   job,
   x,
+  edits = job.edits ?? [],
   gaps,
   tool,
   showMask,
+  showPrediction = true,
+  predictionOpacity = 100,
   onStroke,
   onDiscardRange,
   registerJump,
@@ -96,6 +104,8 @@ export function RasterViewport({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const strokeRef = useRef<Array<{ row: number; x: number }>>([]);
   const dragStartRow = useRef<number | null>(null);
+  const gesture = useRef<{ pointerId: number; kind: "pan" | "redraw" | "discard" } | null>(null);
+  const temporaryPan = useTemporaryPan(containerRef);
 
   const [size, setSize] = useState({ width: 0, height: 0 });
   const [cursor, setCursor] = useState<{ row: number; x: number } | null>(null);
@@ -255,37 +265,14 @@ export function RasterViewport({
 
     // 5. The corrected curve. Broken at unrecovered rows rather than bridged:
     //    a continuous line across a gap would claim data that does not exist.
-    context.strokeStyle = COLORS.curve;
-    context.lineWidth = 1.6;
-    context.beginPath();
-    let penDown = false;
     const firstRow = Math.max(0, Math.floor(visible.y0) - 1);
     const lastRow = Math.min(x.length, Math.ceil(visible.y1) + 1);
-    // At 1:64 a screen pixel spans 64 rows, so drawing every one is ~63 wasted
-    // segments per pixel. Step by whole rows but never finer than the display.
-    const step = Math.max(1, Math.floor(1 / Math.max(scale, 1e-6)));
-
-    for (let row = firstRow; row < lastRow; row += step) {
-      const value = x[row];
-      if (value === null || value === undefined || Number.isNaN(value)) {
-        penDown = false;
-        continue;
-      }
-      const canvasX = value * scale + tx;
-      const canvasY = row * scale + ty;
-      if (!penDown) {
-        context.moveTo(canvasX, canvasY);
-        penDown = true;
-      } else {
-        context.lineTo(canvasX, canvasY);
-      }
-    }
-    context.stroke();
+    drawCurveOverlay(context, overlayRuns(x, firstRow, lastRow, edits), view, { showPrediction, predictionOpacity });
 
     // 6. The in-progress stroke, so a redraw is visible while it is happening.
     if (isDragging && strokeRef.current.length > 1) {
       context.strokeStyle = COLORS.cursor;
-      context.lineWidth = 2;
+      context.lineWidth = REVIEW_OVERLAY_STYLE.width;
       context.beginPath();
       strokeRef.current.forEach((sample, index) => {
         const canvasX = sample.x * scale + tx;
@@ -313,7 +300,10 @@ export function RasterViewport({
     scan.tiles,
     mask.tiles,
     showMask,
+    showPrediction,
+    predictionOpacity,
     x,
+    edits,
     gaps,
     valueTicks,
     cropWidth,
@@ -345,53 +335,62 @@ export function RasterViewport({
   );
 
   function handlePointerDown(event: React.PointerEvent<HTMLCanvasElement>) {
+    if (event.button !== 0 && event.button !== 1) return;
+    event.preventDefault(); event.currentTarget.focus({ preventScroll: true });
     event.currentTarget.setPointerCapture(event.pointerId);
     // Inspect is the neutral tool, so there dragging pans. Under an edit tool
     // the drag belongs to the edit, and the middle button pans instead.
-    if (tool === "inspect" || event.button === 1) {
+    if (tool === "inspect" || event.button === 1 || temporaryPan.pressed.current) {
+      gesture.current = { pointerId: event.pointerId, kind: "pan" };
       pan.beginPan(localPoint(event));
       return;
     }
-    if (event.button !== 0) return;
     const sample = pointerSample(event);
+    if (sample.row < 0 || sample.row >= cropHeight || sample.x < 0 || sample.x >= cropWidth) {
+      if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+      return;
+    }
+    gesture.current = { pointerId: event.pointerId, kind: tool };
     strokeRef.current = [sample];
     dragStartRow.current = sample.row;
     setIsDragging(true);
   }
 
   function handlePointerMove(event: React.PointerEvent<HTMLCanvasElement>) {
-    if (pan.isPanning) {
+    if (gesture.current && gesture.current.pointerId !== event.pointerId) return;
+    if (gesture.current?.kind === "pan") {
       pan.panTo(localPoint(event));
       return;
     }
     const sample = pointerSample(event);
     setCursor(sample);
-    if (!isDragging || tool === "inspect") return;
+    if (!gesture.current) return;
     strokeRef.current.push(sample);
   }
 
   function handlePointerUp(event: React.PointerEvent<HTMLCanvasElement>) {
-    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-      event.currentTarget.releasePointerCapture(event.pointerId);
-    }
-    if (pan.isPanning) {
-      pan.endPan();
-      return;
-    }
-    if (!isDragging) return;
-    setIsDragging(false);
-
-    const samples = strokeRef.current;
-    strokeRef.current = [];
+    const active = gesture.current;
+    if (!active || active.pointerId !== event.pointerId) return;
+    const samples = [...strokeRef.current];
     const startRow = dragStartRow.current;
-    dragStartRow.current = null;
-
-    if (tool === "redraw" && samples.length > 1) {
+    cancelGesture();
+    if (tool === "inspect") return;
+    if (active.kind === "redraw" && samples.length > 1) {
       onStroke(samples);
-    } else if (tool === "discard" && startRow !== null && samples.length > 0) {
+    } else if (active.kind === "discard" && startRow !== null && samples.length > 0) {
       const endRow = samples[samples.length - 1].row;
       onDiscardRange(Math.min(startRow, endRow), Math.max(startRow, endRow) + 1);
     }
+  }
+
+  function cancelGesture() {
+    const active = gesture.current;
+    gesture.current = null; strokeRef.current = []; dragStartRow.current = null; setIsDragging(false);
+    if (active?.kind === "pan") pan.endPan();
+    if (active && canvasRef.current?.hasPointerCapture(active.pointerId)) canvasRef.current.releasePointerCapture(active.pointerId);
+  }
+  function cancelPointer(event: React.PointerEvent<HTMLCanvasElement>) {
+    if (gesture.current?.pointerId === event.pointerId) cancelGesture();
   }
 
   const cursorDepth =
@@ -468,26 +467,38 @@ export function RasterViewport({
         </div>
       </div>
 
+      <div className={styles.legend} aria-label="Review overlay legend">
+        <span><i style={{ background: REVIEW_OVERLAY_STYLE.prediction }} />Prediction{!showPrediction || predictionOpacity === 0 ? " (hidden)" : ` (${predictionOpacity}%)`}</span>
+        <span><i style={{ background: REVIEW_OVERLAY_STYLE.manual }} />Manual redraw</span>
+        <span><i className={styles.maskSwatch} />Model mask{!showMask && " (hidden)"}</span>
+        <span><i className={styles.nullSwatch} />NULL / discarded</span>
+      </div>
+
       <div className={styles.canvasRow}>
-        <div ref={containerRef} className={styles.canvasHost}>
+        <div ref={containerRef} className={styles.canvasHost} onPointerEnter={temporaryPan.onPointerEnter} onPointerLeave={temporaryPan.onPointerLeave}>
           <canvas
             ref={canvasRef}
             className={styles.canvas}
+            tabIndex={0}
+            role="region"
+            aria-label="Curve review canvas"
             style={{
               cursor: pan.isPanning
                 ? "grabbing"
-                : tool === "inspect"
+                : tool === "inspect" || temporaryPan.active
                   ? "grab"
                   : "cell",
             }}
             onPointerDown={handlePointerDown}
             onPointerMove={handlePointerMove}
             onPointerUp={handlePointerUp}
-            onPointerCancel={handlePointerUp}
+            onPointerCancel={cancelPointer}
+            onLostPointerCapture={cancelPointer}
+            onKeyDown={(event) => { if (event.key === "Escape" && gesture.current) { event.preventDefault(); event.stopPropagation(); cancelGesture(); } }}
             onPointerLeave={() => setCursor(null)}
           />
           {scan.isLoading && <div className={styles.loading}>Loading tiles…</div>}
-          {scan.error && <div className={styles.tileError}>{scan.error}</div>}
+          {scan.error && <div className={styles.tileError}>{scan.error} <button type="button" onClick={scan.retry}>Retry tiles</button></div>}
         </div>
 
         {/* The whole scan beside the crop of it.

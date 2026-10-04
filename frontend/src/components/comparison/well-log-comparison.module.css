@@ -1,0 +1,29 @@
+.comparison { border: 1px solid var(--line); background: var(--surface); border-radius: 6px; overflow: hidden; }
+.heading { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 14px 16px 0; }
+.heading h2 { margin: 0; color: var(--ink); font-size: 1rem; font-weight: 600; }
+.heading > span { font-size: .75rem; color: var(--muted); }
+.disclaimer { margin: 7px 16px 12px; font-size: .76rem; color: var(--muted); }
+.wells { margin: 0 16px 12px; padding: 8px 10px; border: 1px solid var(--line); display: flex; gap: 10px 20px; flex-wrap: wrap; }
+.wells legend { padding: 0 5px; color: var(--muted); font-size: .72rem; }
+.wells label { display: flex; align-items: center; gap: 7px; font-size: .8rem; min-width: 150px; max-width: 300px; }
+.wells label span { min-width: 0; overflow-wrap: anywhere; }
+.wells small { display: block; color: var(--muted); font-size: .7rem; }
+.toolbar { display: flex; align-items: center; gap: 10px 16px; flex-wrap: wrap; padding: 9px 16px; border-top: 1px solid var(--line); }
+.toolbar label { display: inline-flex; align-items: center; gap: 6px; font-size: .76rem; color: var(--ink); }
+.toolbar select, .toolbar input[type="number"], .toolbar button { min-height: 32px; border: 1px solid var(--line-strong); border-radius: 4px; background: var(--body-bg); color: var(--ink); font: inherit; font-size: .76rem; padding: 4px 8px; }
+.toolbar input[type="number"] { width: 105px; }
+.toolbar button { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+.toolbar button:hover:not(:disabled) { border-color: var(--accent-teal); }
+.toolbar :disabled { opacity: .5; cursor: not-allowed; }
+.notice { margin: 8px 16px; border-left: 2px solid var(--accent-orange); padding: 6px 10px; color: var(--ink); font-size: .77rem; }
+.note { margin: 8px 16px; color: var(--muted); font-size: .72rem; }
+.scroll { overflow-x: auto; border-top: 1px solid var(--line); }
+.headers { display: grid; padding: 0 22px 0 62px; background: var(--body-bg); }
+.wellHeader { padding: 10px 10px 8px; border-right: 1px solid var(--line); min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.wellHeader:last-child { border-right: 0; }
+.wellHeader strong { color: var(--ink); font-size: .85rem; overflow-wrap: anywhere; }
+.wellHeader span { font-size: .7rem; color: var(--muted); overflow-wrap: anywhere; }
+.wellHeader small { color: var(--accent-orange); font-size: .7rem; }
+.plotWrap { position: relative; }
+.cursor { display: none; position: absolute; left: 62px; right: 22px; border-top: 1px dashed var(--accent-teal); pointer-events: none; z-index: 2; }
+.cursor span { position: absolute; right: 0; bottom: 2px; background: var(--body-bg); color: var(--ink); padding: 2px 4px; font-size: .7rem; }

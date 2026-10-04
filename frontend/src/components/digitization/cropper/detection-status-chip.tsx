@@ -22,15 +22,16 @@ type Props = {
 
 export function DetectionStatusChip({ job, onRetry, retrying }: Props) {
   const notice = detectionNotice(job);
-  if (!notice) return null;
+  const canDetect = Boolean(job?.collection_id && !job.detection && onRetry);
+  if (!notice && !canDetect) return null;
 
   const status = job?.detection?.status;
-  const canRetry = Boolean(onRetry) && (status === "failed" || status === "unavailable");
+  const canRetry = canDetect || (Boolean(onRetry) && (status === "failed" || status === "unavailable"));
 
   return (
     <div className={styles.chip} data-status={status} role="status" aria-live="polite">
       {isDetecting(job) && <span className={styles.spinner} aria-hidden="true" />}
-      <span>{notice}</span>
+      <span>{notice || "No track proposals computed for this segment. Regions do not identify curve continuations."}</span>
       {canRetry && (
         <button
           type="button"
@@ -38,7 +39,7 @@ export function DetectionStatusChip({ job, onRetry, retrying }: Props) {
           onClick={onRetry}
           disabled={retrying}
         >
-          {retrying ? "Retrying…" : "Try again"}
+          {retrying ? "Looking for tracks…" : canDetect ? "Detect track regions" : "Try again"}
         </button>
       )}
     </div>

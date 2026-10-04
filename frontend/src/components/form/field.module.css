@@ -139,7 +139,7 @@
   border-radius: 7px;
   border: 1px solid var(--warn);
   background: rgba(240, 192, 97, 0.1);
-  color: #8a6414;
+  color: var(--warn);
   font-size: 0.8rem;
   line-height: 1.5;
 }
@@ -150,7 +150,7 @@
   border-radius: 7px;
   border: 1px solid var(--ok);
   background: rgba(89, 211, 158, 0.1);
-  color: #1c7a56;
+  color: var(--ok);
   font-size: 0.8rem;
   line-height: 1.5;
 }

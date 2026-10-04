@@ -56,11 +56,16 @@
 /* ── Tools ───────────────────────────────────────────────────── */
 .toolRow {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.3rem;
 }
 
 .toolBtn {
-  flex: 1;
+  flex: 1 1 100px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
   padding: 0.4rem 0.5rem;
   border: 1px solid var(--line-strong);
   border-radius: 7px;

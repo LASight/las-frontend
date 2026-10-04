@@ -1,6 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 import { useCurveReview } from "../../../hooks/use-curve-review";
 import {
@@ -68,7 +68,10 @@ export function ExportStep() {
   );
 
   const exportLas = useMutation({
-    mutationFn: () => digitizationGateway.exportLas(job!.job_id, request),
+    mutationFn: async () => {
+      const { edits, edits_revision } = await review.flushEdits();
+      return digitizationGateway.exportLas(job!.job_id, { ...request, edits, edits_revision });
+    },
     onSuccess: ({ text, fileName }) => {
       setPreview(text);
       downloadText(fileName, text);
@@ -76,11 +79,18 @@ export function ExportStep() {
   });
 
   const sendToAnalysis = useMutation({
-    mutationFn: () => digitizationGateway.sendToAnalysis(job!.job_id, request),
+    mutationFn: async () => {
+      const { edits, edits_revision } = await review.flushEdits();
+      return digitizationGateway.sendToAnalysis(job!.job_id, { ...request, edits, edits_revision });
+    },
     onSuccess: (result) => navigate(`/analysis?analysis=${result.analysis_id}`),
   });
 
   if (!job) return null;
+  if (job.collection_id) return <SectionPanel title="One curve · one output">
+    <p>This segment belongs to a curve. Download and analyze the combined result.</p>
+    <Link to={`/digitize/curves/${encodeURIComponent(job.collection_id)}?segment=${encodeURIComponent(job.job_id)}&view=result`}>Open curve result</Link>
+  </SectionPanel>;
 
   const calibration = job.calibration;
   const quality = job.quality;
@@ -184,6 +194,16 @@ export function ExportStep() {
 
         {exportError && <p className={styles.error}>{exportError}</p>}
         {analysisError && <p className={styles.error}>{analysisError}</p>}
+        {review.error && <p className={styles.error}>{review.error}</p>}
+        {review.saveError && <p className={styles.error}>Corrections not saved: {review.saveError}{" "}
+          <button type="button" disabled={review.isSaving} onClick={() => {
+            if (window.confirm("Discard this unsaved local draft and load the server's saved corrections?")) void review.restoreSavedEdits();
+          }}>Restore saved corrections</button>
+        </p>}
+        {review.isSaving && <p role="status">Saving corrections…</p>}
+        {review.hasLegacyDraft && <button type="button" disabled={review.isSaving || review.hasUnsavedEdits} onClick={() => {
+          if (window.confirm("Recover older local corrections after verifying access to this segment? The original draft and revision are retained. An existing account draft is never overwritten.")) void review.recoverLegacyEdits();
+        }}>Recover older corrections</button>}
 
         <div className={styles.actions}>
           <button
@@ -197,7 +217,7 @@ export function ExportStep() {
           <button
             type="button"
             className={styles.secondaryBtn}
-            disabled={sendToAnalysis.isPending}
+            disabled={sendToAnalysis.isPending || exportLas.isPending || review.isLoading || !!review.error}
             onClick={() => sendToAnalysis.mutate()}
             title="Run the LAS analysis workflow on this curve without downloading it first"
           >
@@ -206,7 +226,7 @@ export function ExportStep() {
           <button
             type="button"
             className={styles.primaryBtn}
-            disabled={exportLas.isPending}
+            disabled={exportLas.isPending || sendToAnalysis.isPending || review.isLoading || !!review.error}
             onClick={() => exportLas.mutate()}
           >
             {exportLas.isPending ? "Building…" : "Download LAS"}

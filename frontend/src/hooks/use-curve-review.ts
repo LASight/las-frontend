@@ -3,6 +3,7 @@ import { useCallback, useMemo, useState } from "react";
 
 import {
   addEdit,
+  boundedRowRange,
   applyEdits,
   findGaps,
   resetEdits,
@@ -11,8 +12,9 @@ import {
   undoLast,
   type CurveSeries,
 } from "../controllers/curve-edit-controller";
-import type { CurveEdit, JobSummary } from "../models/digitization-models";
+import type { JobSummary } from "../models/digitization-models";
 import { digitizationGateway } from "../services/digitization-service";
+import { useReviewEdits } from "./use-review-edits";
 
 /**
  * The human-in-the-loop correction state for one digitized curve.
@@ -37,10 +39,16 @@ export function curveQueryKey(jobId: string) {
 
 export function useCurveReview(job: JobSummary | null) {
   const jobId = job?.job_id;
-  const [edits, setEdits] = useState<CurveEdit[]>([]);
+  const persistence = useReviewEdits(job);
+  const { edits, update: setEdits } = persistence;
   const [tool, setTool] = useState<ReviewTool>("inspect");
   const [showMask, setShowMask] = useState(true);
+  // Viewer-only presentation: never part of the edits or backend job request.
+  const [showPrediction, setShowPrediction] = useState(true);
+  const [predictionOpacity, setPredictionOpacity] = useState(100);
   const [status, setStatus] = useState("");
+  const cropRows = job?.crop ? job.crop.y_bottom - job.crop.y_top : 0;
+  const cropWidth = job?.crop ? job.crop.x_right - job.crop.x_left : 0;
 
   const query = useQuery({
     queryKey: curveQueryKey(jobId ?? ""),
@@ -70,25 +78,27 @@ export function useCurveReview(job: JobSummary | null) {
 
   const applyStroke = useCallback(
     (samples: ReadonlyArray<{ row: number; x: number }>) => {
-      const edit = strokeToEdit(samples);
+      const edit = strokeToEdit(samples, { rows: cropRows, width: cropWidth });
       if (!edit) return;
       setEdits((previous) => addEdit(previous, edit));
       setStatus(`Redrew ${edit.y1 - edit.y0} rows.`);
     },
-    []
+    [setEdits, cropRows, cropWidth]
   );
 
   const discardRange = useCallback((y0: number, y1: number) => {
-    if (y1 <= y0) return;
-    setEdits((previous) => addEdit(previous, { kind: "discard", y0, y1 }));
-    setStatus(`Discarded ${y1 - y0} rows — they will export as NULL (-999.25).`);
-  }, []);
+    const range = boundedRowRange(y0, y1, cropRows);
+    if (!range) return;
+    setEdits((previous) => addEdit(previous, { kind: "discard", y0: range[0], y1: range[1] }));
+    setStatus(`Discarded ${range[1] - range[0]} rows — they will export as NULL (-999.25).`);
+  }, [setEdits, cropRows]);
 
   const acceptRange = useCallback((y0: number, y1: number) => {
-    if (y1 <= y0) return;
-    setEdits((previous) => addEdit(previous, { kind: "accept", y0, y1 }));
-    setStatus(`Marked ${y1 - y0} rows as reviewed.`);
-  }, []);
+    const range = boundedRowRange(y0, y1, cropRows);
+    if (!range) return;
+    setEdits((previous) => addEdit(previous, { kind: "accept", y0: range[0], y1: range[1] }));
+    setStatus(`Marked ${range[1] - range[0]} rows as reviewed.`);
+  }, [setEdits, cropRows]);
 
   const undo = useCallback(() => {
     setEdits((previous) => {
@@ -96,12 +106,12 @@ export function useCurveReview(job: JobSummary | null) {
       setStatus("Undid the last correction.");
       return undoLast(previous);
     });
-  }, []);
+  }, [setEdits]);
 
   const reset = useCallback(() => {
-    setEdits(resetEdits());
+    setEdits(() => resetEdits());
     setStatus("Reverted to the model's original output.");
-  }, []);
+  }, [setEdits]);
 
   return {
     /** The model's raw output, never mutated. */
@@ -112,11 +122,22 @@ export function useCurveReview(job: JobSummary | null) {
     observed: corrected.observed,
     gaps,
     edits,
+    flushEdits: persistence.flush,
+    restoreSavedEdits: persistence.restoreSaved,
+    recoverLegacyEdits: persistence.recoverLegacy,
+    hasLegacyDraft: persistence.hasLegacyDraft,
+    isSaving: persistence.saving,
+    saveError: persistence.error,
+    hasUnsavedEdits: persistence.dirty,
     stats,
     tool,
     setTool,
     showMask,
     setShowMask,
+    showPrediction,
+    setShowPrediction,
+    predictionOpacity,
+    setPredictionOpacity,
     status,
     isLoading: query.isLoading,
     error: query.error instanceof Error ? query.error.message : null,

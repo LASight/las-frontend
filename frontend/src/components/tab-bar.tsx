@@ -1,4 +1,4 @@
-import { NavLink } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
 
 import styles from "./tab-bar.module.css";
 
@@ -23,12 +23,13 @@ const TABS: Tab[] = [
  * the same reason the digitization wizard's steps are routes.
  */
 export function TabBar() {
+  const { search } = useLocation();
   return (
     <div className={styles.tabs}>
       {TABS.map((tab) => (
         <NavLink
           key={tab.to}
-          to={tab.to}
+          to={{ pathname: tab.to, search }}
           end={tab.end}
           className={({ isActive }) =>
             `${styles.tab} ${isActive ? styles.active : ""}`
