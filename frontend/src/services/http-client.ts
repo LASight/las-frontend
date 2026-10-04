@@ -18,8 +18,11 @@ import {
   getRefreshToken,
   setSession,
 } from "./token-store";
+import { getSessionScope, isCurrentSession, type SessionScope } from "./session-scope";
 
-export const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000";
+// An explicitly empty base selects same-origin /api (e.g. an opt-in dev proxy).
+// Undefined keeps the existing backend default; no CORS/security bypass.
+export const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8000";
 
 /** An API call that came back with a non-2xx status. */
 export class ApiError extends Error {
@@ -98,7 +101,7 @@ function withAuth(init: RequestInit): RequestInit {
  * would present one the first had already revoked and the user would be signed
  * out by their own concurrency.
  */
-let refreshInFlight: Promise<boolean> | null = null;
+let refreshInFlight: { session: SessionScope; promise: Promise<boolean> } | null = null;
 
 const NON_REFRESHABLE_AUTH_PATHS = new Set([
   "/api/auth/login",
@@ -112,6 +115,7 @@ function canRefresh(path: string): boolean {
 }
 
 async function refreshSession(): Promise<boolean> {
+  const session = getSessionScope();
   const refreshToken = getRefreshToken();
   if (!refreshToken) return false;
 
@@ -123,37 +127,52 @@ async function refreshSession(): Promise<boolean> {
     body: JSON.stringify({ refresh_token: refreshToken }),
   });
 
+  if (!isCurrentSession(session)) return false;
+
   if (!response.ok) {
     clearSession();
     return false;
   }
 
-  setSession(await response.json());
+  const tokens = await response.json();
+  if (!isCurrentSession(session)) return false;
+  setSession(tokens);
   return true;
 }
 
 /** Refresh at most once concurrently, and let every waiter share the result. */
 function refreshOnce(): Promise<boolean> {
-  refreshInFlight ??= refreshSession()
+  const session = getSessionScope();
+  if (refreshInFlight?.session === session) return refreshInFlight.promise;
+  const pending = { session, promise: Promise.resolve(false) };
+  pending.promise = refreshSession()
     .catch(() => {
-      clearSession();
+      if (isCurrentSession(session)) clearSession();
       return false;
     })
     .finally(() => {
-      refreshInFlight = null;
+      if (refreshInFlight === pending) refreshInFlight = null;
     });
-  return refreshInFlight;
+  refreshInFlight = pending;
+  return pending.promise;
 }
 
 async function send(path: string, init: RequestInit): Promise<Response> {
+  const session = getSessionScope();
+  const assertSession = () => {
+    if (canRefresh(path) && !isCurrentSession(session)) throw new Error("Session changed. The previous request was cancelled.");
+  };
   let response = await fetch(`${API_BASE}${path}`, withAuth(init));
+  assertSession();
 
   // One retry, and only for 401. A second 401 after a successful refresh means
   // the account genuinely cannot do this, and retrying again would just be a
   // slower way to show the same error.
   if (response.status === 401 && canRefresh(path)) {
     if (await refreshOnce()) {
+      assertSession();
       response = await fetch(`${API_BASE}${path}`, withAuth(init));
+      assertSession();
     }
   }
 
@@ -165,7 +184,10 @@ async function send(path: string, init: RequestInit): Promise<Response> {
 
 /** Perform a request and parse the JSON body. */
 export async function apiRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
-  return (await send(path, init)).json() as Promise<T>;
+  const session = getSessionScope();
+  const result = await (await send(path, init)).json() as T;
+  if (canRefresh(path) && !isCurrentSession(session)) throw new Error("Session changed. The previous response was cancelled.");
+  return result;
 }
 
 /** Perform a request expecting no body, e.g. a 204. */
@@ -188,7 +210,10 @@ export async function apiRequestBlob(
   path: string,
   init: RequestInit = {}
 ): Promise<Blob> {
-  return (await send(path, init)).blob();
+  const session = getSessionScope();
+  const result = await (await send(path, init)).blob();
+  if (!isCurrentSession(session)) throw new Error("Session changed. The previous response was cancelled.");
+  return result;
 }
 
 /** POST a JSON body. */

@@ -14,7 +14,7 @@ import { Sidebar } from "./components/sidebar";
  * chrome and routing, and nothing about either workflow.
  */
 export function AppShell() {
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(true);
   const [status, setStatus] = useState("Ready.");
   const [busy, setBusy] = useState(false);
   const [sidebarSlot, setSidebarSlot] = useState<HTMLElement | null>(null);

@@ -1,0 +1,8 @@
+/* One vector, flat currentColor, no hero/glow or duplicate colored assets. */
+.mark {
+  display: inline-block;
+  flex-shrink: 0;
+  background: currentColor;
+  -webkit-mask: url("../assets/brand/argentinosaurus.svg") center / contain no-repeat;
+  mask: url("../assets/brand/argentinosaurus.svg") center / contain no-repeat;
+}

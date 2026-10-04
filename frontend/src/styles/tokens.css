@@ -1,15 +1,29 @@
 :root {
-  /* ── Body / light theme ─────────────────────────────────── */
-  --body-bg:     #f4f5f7;
-  --surface:     #ffffff;
-  --ink:         #1e2533;
-  --muted:       #6b7a8d;
-  --line:        #e1e4e8;
-  --line-strong: #c9cdd4;
+  /* Workstation chrome. Raster pixels retain their original white background. */
+  --body-bg:     #202428;
+  --surface:     #292e33;
+  --surface-raised: #32383e;
+  --surface-inset: #24292e;
+  --ink:         #e7eaed;
+  --muted:       #a7b1ba;
+  --line:        #3a424a;
+  --line-strong: #59646e;
+  --focus-ring:  #9bc9e7;
+  --track-grid:  #41494f;
+  --track-ink:   #c0c9d1;
+  --track-colors-1: #83c3da;
+  --track-colors-2: #edbc79;
+  --track-colors-3: #c0a6e5;
+  --track-colors-4: #9fceb1;
+  --raster-background: #ffffff;
+  --radius-panel: 3px;
+  --radius-control: 3px;
+  --font-ui: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-data: "IBM Plex Mono", ui-monospace, monospace;
 
   /* ── Accents ─────────────────────────────────────────────── */
-  --accent-teal:     #38b9d9;
-  --accent-teal-2:   #68e4de;
+  --accent-teal:     #89bfd1;
+  --accent-teal-2:   #a9cfdb;
   --accent-orange:   #f39a4b;
   --accent-orange-2: #f0c061;
   --accent-green:    #54d1a0;
@@ -30,19 +44,19 @@
 
   /* ── Sidebar dimensions ──────────────────────────────────── */
   --sidebar-width:     260px;
-  --sidebar-collapsed: 52px;
+  --sidebar-collapsed: 58px;
   --sidebar-t:         220ms ease;
 }
 
 /* Sidebar dark palette — defined on :root so CSS Modules hashed classes can access them */
 :root {
-  --sb-bg-deep: #080f16;
-  --sb-bg:      #0d1a24;
-  --sb-hover:   #132130;
-  --sb-active:  #1a2d40;
-  --sb-ink:     #d9ecfa;
-  --sb-muted:   #8ab4cc;
-  --sb-line:    rgba(166, 197, 217, 0.18);
-  --sb-line-s:  rgba(166, 197, 217, 0.28);
+  --sb-bg-deep: #252a2f;
+  --sb-bg:      #2c3238;
+  --sb-hover:   #363f47;
+  --sb-active:  #3b4852;
+  --sb-ink:     #e7eaed;
+  --sb-muted:   #b0bac4;
+  --sb-line:    #3a424a;
+  --sb-line-s:  #59646e;
   --assistant-width: 420px;
 }

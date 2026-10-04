@@ -87,9 +87,9 @@ export function ExportStep() {
   });
 
   if (!job) return null;
-  if (job.collection_id) return <SectionPanel title="Una curva · una salida">
-    <p>Este tramo forma parte de una curva. La descarga y el análisis se realizan sobre el resultado conjunto.</p>
-    <Link to={`/digitize/curves/${encodeURIComponent(job.collection_id)}?segment=${encodeURIComponent(job.job_id)}&view=result`}>Abrir resultado de la curva</Link>
+  if (job.collection_id) return <SectionPanel title="One curve · one output">
+    <p>This segment belongs to a curve. Download and analyze the combined result.</p>
+    <Link to={`/digitize/curves/${encodeURIComponent(job.collection_id)}?segment=${encodeURIComponent(job.job_id)}&view=result`}>Open curve result</Link>
   </SectionPanel>;
 
   const calibration = job.calibration;
@@ -201,6 +201,9 @@ export function ExportStep() {
           }}>Restore saved corrections</button>
         </p>}
         {review.isSaving && <p role="status">Saving corrections…</p>}
+        {review.hasLegacyDraft && <button type="button" disabled={review.isSaving || review.hasUnsavedEdits} onClick={() => {
+          if (window.confirm("Recover older local corrections after verifying access to this segment? The original draft and revision are retained. An existing account draft is never overwritten.")) void review.recoverLegacyEdits();
+        }}>Recover older corrections</button>}
 
         <div className={styles.actions}>
           <button

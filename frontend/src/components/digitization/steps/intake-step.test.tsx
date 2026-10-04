@@ -32,11 +32,11 @@ describe("upload enters one curve workspace", () => {
     await act(async () => input.dispatchEvent(new Event("change", { bubbles: true })));
   });
   afterEach(async () => { await act(async () => root.unmount()); client.clear(); host.remove(); vi.restoreAllMocks(); });
-  it("creates a filename-titled curve with the uploaded source as Tramo 1, without invented well data", async () => {
+  it("creates a filename-titled curve with the uploaded source as Segment 1, without invented well data", async () => {
     await upload();
     expect(digitizationGateway.createJob).toHaveBeenCalledTimes(1);
     expect(collectionGateway.create).toHaveBeenCalledWith("source", "Shutts.tiff");
-    expect(collectionGateway.renameSegment).toHaveBeenCalledWith("collection", "source", "Tramo 1");
+    expect(collectionGateway.renameSegment).toHaveBeenCalledWith("collection", "source", "Segment 1");
     expect(host.textContent).toBe("/digitize/curves/collection?segment=source&view=crop");
   });
   it("retries collection failures without uploading a duplicate TIFF", async () => {

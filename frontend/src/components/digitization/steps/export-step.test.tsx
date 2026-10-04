@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useCurveReview } from "../../../hooks/use-curve-review";
 import { DEFAULT_CALIBRATION, type CurveEdit, type JobSummary } from "../../../models/digitization-models";
 import { digitizationGateway } from "../../../services/digitization-service";
+import { setSessionAccount } from "../../../services/session-scope";
 import { ExportStep } from "./export-step";
 
 const controller = vi.hoisted(() => ({ job: null as JobSummary | null }));
@@ -56,6 +57,7 @@ describe("Review → Export and reload", () => {
   beforeEach(() => {
     (globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
     localStorage.clear();
+    setSessionAccount("account-a");
     vi.clearAllMocks();
     controller.job = job();
     host = document.createElement("div");

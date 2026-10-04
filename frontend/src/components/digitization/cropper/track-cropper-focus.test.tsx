@@ -29,13 +29,13 @@ describe("unified cropper focus toolbar", () => {
   });
   afterEach(async () => { await act(async () => root.unmount()); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
-  it("autofocuses saved bounds, but manual Inicio del tramo can recover the visible draft without changing it", async () => {
+  it("autofocuses saved bounds, but manual Segment start can recover the visible draft without changing it", async () => {
     const job = { ...segmentJob("repeat"), crop: saved, raster: { ...segmentJob("repeat").raster, width: 2705, height: 40000 } };
     const snapshot = structuredClone(job);
     await act(async () => root.render(<TrackCropper job={job} crop={draft} compact focusSavedCropStart onChange={onChange} />));
     expect(focus).toHaveBeenCalledTimes(1); expect(focus).toHaveBeenLastCalledWith(saved);
     const button = host.querySelector("#focus-segment-start") as HTMLButtonElement;
-    expect(button.textContent).toBe("Inicio del tramo"); expect(button.disabled).toBe(false);
+    expect(button.textContent).toBe("Segment start"); expect(button.disabled).toBe(false);
     await act(async () => button.click()); expect(focus).toHaveBeenLastCalledWith(draft);
     expect(onChange).not.toHaveBeenCalled(); expect(job).toEqual(snapshot); expect(draft.y_top).toBe(14700);
   });

@@ -11,9 +11,15 @@ body,
 body {
   margin: 0;
   color: var(--ink);
-  font-family: "Space Grotesk", sans-serif;
+  font-family: var(--font-ui);
+  font-size: 14px;
   background: var(--body-bg);
 }
+
+button, input, select, textarea { font-family: inherit; }
+:where(button, a, summary, input, select, textarea):focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+input[type="checkbox"], progress { accent-color: var(--accent-teal); }
+::selection { color: var(--ink); background: #41576a; }
 
 h1,
 h2,

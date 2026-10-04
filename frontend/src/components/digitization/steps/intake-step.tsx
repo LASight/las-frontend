@@ -51,7 +51,7 @@ export function IntakeStep() {
       const job = uploaded.current ? await digitizationGateway.getJob(uploaded.current.job_id) : await digitizationGateway.createJob(selected);
       uploaded.current = job;
       const collection = job.collection_id ? await collectionGateway.get(job.collection_id) : await collectionGateway.create(job.job_id, selected.name);
-      await collectionGateway.renameSegment(collection.collection_id, job.job_id, "Tramo 1");
+      await collectionGateway.renameSegment(collection.collection_id, job.job_id, "Segment 1");
       return { collection, job };
     },
     onSuccess: ({ collection, job }) => navigate(`/digitize/curves/${encodeURIComponent(collection.collection_id)}?segment=${encodeURIComponent(job.job_id)}&view=crop`),

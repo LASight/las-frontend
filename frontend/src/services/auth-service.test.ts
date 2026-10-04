@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { HttpAuthGateway } from "./auth-service";
 import { API_BASE, ApiError, apiRequest } from "./http-client";
 import { clearSession, getAccessToken, getMediaToken, setSession } from "./token-store";
+import { setSessionAccount } from "./session-scope";
 
 /**
  * The transparent-refresh path in `http-client`.
@@ -189,5 +190,32 @@ describe("http-client session handling", () => {
     // The access token is the credential that can do everything; it stays in
     // memory so no script can read it out of storage.
     expect(localStorage.getItem("wellsight.access_token")).toBeNull();
+  });
+
+  it("does not refresh or retry A's late 401 using B's credentials", async () => {
+    setSessionAccount("a"); setSession(tokens("a"));
+    let finish!: (value: Response) => void;
+    const fetchMock = vi.fn(() => new Promise<Response>(resolve => { finish = resolve; }));
+    vi.stubGlobal("fetch", fetchMock);
+    const request = apiRequest("/api/analyses/private-a");
+    clearSession(); setSessionAccount("b"); setSession(tokens("b"));
+    finish(jsonResponse({ detail: "expired" }, 401));
+    await expect(request).rejects.toThrow("Session changed");
+    expect(fetchMock).toHaveBeenCalledTimes(1); expect(getAccessToken()).toBe("access-b");
+  });
+
+  it("does not install A's late refresh tokens over B's session", async () => {
+    setSessionAccount("a"); setSession(tokens("a"));
+    let finish!: (value: Response) => void;
+    const fetchMock = vi.fn().mockResolvedValueOnce(jsonResponse({ detail: "expired" }, 401))
+      .mockImplementationOnce(() => new Promise<Response>(resolve => { finish = resolve; }));
+    vi.stubGlobal("fetch", fetchMock);
+    const request = apiRequest("/api/analyses/private-a");
+    await Promise.resolve(); await Promise.resolve();
+    clearSession(); setSessionAccount("b"); setSession(tokens("b"));
+    finish(jsonResponse(tokens("obsolete-a")));
+    await expect(request).rejects.toBeInstanceOf(ApiError);
+    expect(fetchMock).toHaveBeenCalledTimes(2); expect(getAccessToken()).toBe("access-b");
+    expect(localStorage.getItem("wellsight.refresh_token")).toBe("refresh-b");
   });
 });

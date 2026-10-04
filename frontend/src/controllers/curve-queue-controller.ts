@@ -7,7 +7,7 @@ export function identityIssue(collection: CollectionSummary): string | null {
   const mismatch = collection.segments.find(({ job }) => job.calibration && (
     job.calibration.mnemonic !== reference.mnemonic || job.calibration.value_unit !== reference.value_unit ||
     job.calibration.depth_unit !== reference.depth_unit));
-  return mismatch ? `${mismatch.label}: el mnemónico y las unidades deben coincidir con la curva. No se convierten automáticamente.` : null;
+  return mismatch ? `${mismatch.label}: mnemonic and units must match the curve. No automatic conversion is performed.` : null;
 }
 
 export function canProcess(job: JobSummary): boolean {
@@ -41,7 +41,7 @@ export async function processCurveQueue(collection: CollectionSummary, gateway: 
       publish(job);
     }
     if (job.phase === "failed" || !job.quality) {
-      throw new Error(`${segment.label}: ${job.error ?? "El procesamiento no produjo una predicción. Reintentar no borra otros tramos."}`);
+      throw new Error(`${segment.label}: ${job.error ?? "Processing did not produce a prediction. Retrying preserves other segments."}`);
     }
   }
 }

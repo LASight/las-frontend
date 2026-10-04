@@ -207,6 +207,7 @@ export function CropStep() {
         <TrackCropper
           job={job}
           crop={crop}
+          disabled={setCrop.isPending}
           onChange={setLocalCrop}
           detectedTracks={detectedTracks}
           selectedTrackIndex={selectedTrackIndex}

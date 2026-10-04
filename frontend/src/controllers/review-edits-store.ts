@@ -26,14 +26,8 @@ export class ReviewEditsStore {
     try {
       const raw = storage?.getItem(key);
       if (raw) {
-        const parsed: unknown = JSON.parse(raw);
-        if (parsed && typeof parsed === "object" && "edits" in parsed) {
-          const saved = parsed as { edits: unknown; edits_revision?: number };
-          if (Array.isArray(saved.edits) && saved.edits.every(isCurveEdit)) {
-            draft = saved.edits;
-            revision = saved.edits_revision;
-          }
-        }
+        const saved = parseReviewDraft(raw);
+        if (saved) { draft = saved.edits; revision = saved.edits_revision; }
       }
     } catch { /* Storage may be unavailable; backend remains authoritative. */ }
     this.state = { edits: structuredClone(draft ?? edits), edits_revision: revision, dirty: draft !== null, saving: false, error: null };
@@ -58,6 +52,14 @@ export class ReviewEditsStore {
     if (this.inFlight) throw new Error("Wait for the current save before restoring corrections.");
     this.storage?.removeItem(this.key);
     this.publish({ edits: structuredClone(edits), edits_revision: revision, dirty: false, error: null });
+  }
+
+  recoverDraft(raw: string) {
+    if (this.inFlight || this.state.dirty) throw new Error("Save or restore the current draft before recovering older corrections.");
+    const draft = parseReviewDraft(raw);
+    if (!draft) throw new Error("The older corrections are invalid; their storage was left unchanged.");
+    this.publish({ ...structuredClone(draft), dirty: true, error: null });
+    void this.flush().catch(() => {});
   }
 
   reportError(error: unknown) {
@@ -110,6 +112,15 @@ export class ReviewEditsStore {
     })();
     return this.inFlight;
   };
+}
+
+export function parseReviewDraft(raw: string): { edits: CurveEdit[]; edits_revision?: number } | null {
+  try {
+    const saved = JSON.parse(raw);
+    if (saved && Array.isArray(saved.edits) && saved.edits.every(isCurveEdit) &&
+      (saved.edits_revision === undefined || (Number.isInteger(saved.edits_revision) && saved.edits_revision >= 0))) return saved;
+  } catch { /* Preserve corrupt source storage for explicit operator recovery. */ }
+  return null;
 }
 
 function isCurveEdit(value: unknown): value is CurveEdit {

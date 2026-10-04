@@ -52,7 +52,7 @@ describe("wizard collection panel", () => {
     expect(collectionGateway.addSegment).toHaveBeenCalledWith("collection", "Next interval");
     expect(host.textContent).toContain("/digitize/new-segment/crop");
     expect(client.getQueryData<JobSummary>(jobQueryKey("new-segment"))?.job_id).toBe("new-segment");
-    expect(client.getQueryData(jobQueryKey("first"))).toBeUndefined();
+    expect(client.getQueryData<JobSummary>(jobQueryKey("first"))).toEqual(collectionFixture().segments[0].job);
   });
   it("selects each segment's own job and exposes return-to-collection from history's job", async () => {
     await render(segmentJob("first"));

@@ -1,6 +1,7 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import type { FileValidationReport, PreValidatePayload, ValidationDecision } from "../models/analyze-models";
 import { preValidateFiles } from "../services/api-service";
+import { getSessionScope, isCurrentSession } from "../services/session-scope";
 
 export type ValidationState = "idle" | "validating" | "confirming" | "confirmed" | "cancelled";
 
@@ -30,16 +31,23 @@ export function useFileValidation(): FileValidationHook {
   const [validationPayload, setValidationPayload] = useState<PreValidatePayload | null>(null);
   const [decisions, setDecisions] = useState<ValidationDecision[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const generation = useRef(0);
+  useEffect(() => () => { generation.current++; }, []);
 
   const validate = useCallback(async (files: FileList) => {
+    const request = ++generation.current;
+    const session = getSessionScope();
+    const current = () => request === generation.current && isCurrentSession(session);
     setState("validating");
     setError(null);
     try {
       const result = await preValidateFiles(files);
+      if (!current()) return;
       setValidationPayload(result);
       setDecisions(buildDefaultDecisions(result.files));
       setState("confirming");
     } catch (err) {
+      if (!current()) return;
       setError(err instanceof Error ? err.message : "Validation failed.");
       setState("idle");
     }
@@ -51,10 +59,12 @@ export function useFileValidation(): FileValidationHook {
   }, []);
 
   const cancel = useCallback(() => {
+    generation.current++;
     setState("cancelled");
   }, []);
 
   const reset = useCallback(() => {
+    generation.current++;
     setState("idle");
     setValidationPayload(null);
     setDecisions([]);

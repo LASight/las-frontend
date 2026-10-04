@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Hand, MousePointer2 } from "lucide-react";
+import { useTemporaryPan } from "./use-temporary-pan";
 
 import type {
   DetectedTrack,
@@ -77,6 +79,8 @@ type Props = {
   compact?: boolean;
   /** Unified workspace only: focus saved crops on mount/change, never drafts. */
   focusSavedCropStart?: boolean;
+  /** Processing/saving locks crop edits, not navigation. */
+  disabled?: boolean;
 };
 
 /** Arrow-key nudge, in image pixels. Shift multiplies it. */
@@ -84,8 +88,10 @@ const NUDGE_PX = 1;
 const NUDGE_COARSE_PX = 25;
 
 type Drag =
-  | { kind: "pan" }
-  | { kind: "crop"; handle: CropHandle; lastImagePoint: Point };
+  | { kind: "pan"; pointerId: number }
+  | { kind: "proposal"; pointerId: number; start: Point; track: DetectedTrack }
+  | { kind: "crop"; pointerId: number; handle: CropHandle; lastImagePoint: Point };
+const CLICK_DISTANCE = 5;
 
 export function TrackCropper({
   job,
@@ -98,10 +104,13 @@ export function TrackCropper({
   otherSelections = [],
   compact = false,
   focusSavedCropStart = false,
+  disabled = false,
 }: Props) {
   const stageRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const dragRef = useRef<Drag | null>(null);
+  const [mode, setMode] = useState<"navigate" | "select">("navigate");
+  const temporaryPan = useTemporaryPan(stageRef);
 
   const [viewport, setViewport] = useState({ width: 0, height: 0 });
   const [hoverHandle, setHoverHandle] = useState<CropHandle | null>(null);
@@ -115,7 +124,7 @@ export function TrackCropper({
     [job.raster.width, job.raster.height]
   );
 
-  const pan = usePanZoom({ image, viewport, targetRef: stageRef });
+  const pan = usePanZoom({ image, viewport, targetRef: stageRef, wheel: "pan" });
   const { view } = pan;
   useSavedCropFocus({ enabled: focusSavedCropStart, jobId: job.job_id,
     savedCrop: job.crop, viewport, focus: pan.focusRegionStart });
@@ -193,14 +202,22 @@ export function TrackCropper({
   }, []);
 
   function handlePointerDown(event: React.PointerEvent<HTMLDivElement>) {
-    if (event.button !== 0) return;
+    if (event.button !== 0 && event.button !== 1) return;
+    event.preventDefault();
+    event.currentTarget.focus({ preventScroll: true });
     const point = localPoint(event);
-    const handle = hitTestHandle(crop, point, view);
     event.currentTarget.setPointerCapture(event.pointerId);
+    // Navigation always bypasses ALL proposal/handle hit testing.
+    if (event.button === 1 || temporaryPan.pressed.current || mode === "navigate" || disabled) {
+      dragRef.current = { kind: "pan", pointerId: event.pointerId };
+      pan.beginPan(point); return;
+    }
+    const handle = hitTestHandle(crop, point, view);
 
     if (handle) {
       dragRef.current = {
         kind: "crop",
+        pointerId: event.pointerId,
         handle,
         lastImagePoint: screenToImage(point, view),
       };
@@ -216,12 +233,12 @@ export function TrackCropper({
     if (onSelectTrack && detectedTracks.length > 0) {
       const hit = trackAtPoint(detectedTracks, screenToImage(point, view));
       if (hit) {
-        onSelectTrack(hit);
+        dragRef.current = { kind: "proposal", pointerId: event.pointerId, start: point, track: hit };
         return;
       }
     }
 
-    dragRef.current = { kind: "pan" };
+    dragRef.current = { kind: "pan", pointerId: event.pointerId };
     pan.beginPan(point);
   }
 
@@ -233,8 +250,16 @@ export function TrackCropper({
       // Only on an actual change: a pointermove fires at the display refresh
       // rate, and setting state unconditionally would re-render the stage sixty
       // times a second just to move the cursor across empty space.
-      const next = hitTestHandle(crop, point, view);
+      const next = mode === "select" && !disabled && !temporaryPan.pressed.current ? hitTestHandle(crop, point, view) : null;
       setHoverHandle((current) => (current === next ? current : next));
+      return;
+    }
+    if (drag.pointerId !== event.pointerId) return;
+    if (drag.kind === "proposal") {
+      if (Math.hypot(point.x - drag.start.x, point.y - drag.start.y) > CLICK_DISTANCE || temporaryPan.pressed.current) {
+        dragRef.current = { kind: "pan", pointerId: event.pointerId };
+        pan.beginPan(drag.start); pan.panTo(point);
+      }
       return;
     }
 
@@ -242,6 +267,8 @@ export function TrackCropper({
       pan.panTo(point);
       return;
     }
+
+    if (disabled) { cancelGesture(); return; }
 
     const imagePoint = screenToImage(point, view);
     if (drag.handle === "move") {
@@ -265,15 +292,33 @@ export function TrackCropper({
   }
 
   function handlePointerUp(event: React.PointerEvent<HTMLDivElement>) {
-    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-      event.currentTarget.releasePointerCapture(event.pointerId);
+    const drag = dragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    if (drag.kind === "proposal" && !disabled && !temporaryPan.pressed.current) {
+      const point = localPoint(event);
+      if (Math.hypot(point.x - drag.start.x, point.y - drag.start.y) <= CLICK_DISTANCE) onSelectTrack?.(drag.track);
     }
-    if (dragRef.current?.kind === "pan") pan.endPan();
-    dragRef.current = null;
-    setActiveHandle(null);
+    cancelGesture();
+  }
+
+  function cancelGesture() {
+    const drag = dragRef.current;
+    dragRef.current = null; setActiveHandle(null);
+    if (drag?.kind === "pan") pan.endPan();
+    if (drag && stageRef.current?.hasPointerCapture(drag.pointerId)) stageRef.current.releasePointerCapture(drag.pointerId);
+  }
+
+  function cancelPointer(event: React.PointerEvent<HTMLDivElement>) {
+    if (dragRef.current?.pointerId !== event.pointerId) return;
+    cancelGesture();
+  }
+
+  function stageKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
+    if (event.key === "Escape" && dragRef.current) { event.preventDefault(); event.stopPropagation(); cancelGesture(); }
   }
 
   function handleDoubleClick(event: React.MouseEvent<HTMLDivElement>) {
+    if (mode !== "navigate") return;
     const rect = event.currentTarget.getBoundingClientRect();
     pan.zoomBy(ZOOM_STEP, {
       x: event.clientX - rect.left,
@@ -301,6 +346,7 @@ export function TrackCropper({
     event: React.KeyboardEvent<HTMLButtonElement>,
     handle: CropHandle
   ) {
+    if (mode !== "select" || disabled || temporaryPan.pressed.current) return;
     const step = event.shiftKey ? NUDGE_COARSE_PX : NUDGE_PX;
     const delta: Record<string, Point> = {
       ArrowLeft: { x: -step, y: 0 },
@@ -324,12 +370,16 @@ export function TrackCropper({
       ? `${view.scale.toFixed(view.scale >= 4 ? 0 : 1)}:1`
       : `1:${Math.round(1 / view.scale)}`;
 
-  const cursor = cursorForHandle(activeHandle ?? hoverHandle);
+  const cursor = mode === "navigate" || temporaryPan.active || disabled ? "grab" : cursorForHandle(activeHandle ?? hoverHandle);
 
   return (
     <div className={`${styles.wrapper} ${focusSavedCropStart ? styles.focusContext : ""}`}>
       <div className={styles.toolbar}>
-        {focusSavedCropStart && <button id="focus-segment-start" type="button" disabled={viewport.width <= 0 || viewport.height <= 0} onClick={() => pan.focusRegionStart(crop)}>Inicio del tramo</button>}
+        <div className={styles.modes} role="group" aria-label="Crop interaction mode">
+          <button id="crop-mode-navigate" type="button" aria-pressed={mode === "navigate"} title="Pan without changing the crop. Scroll to travel; Ctrl/Cmd + scroll to zoom." onClick={() => { cancelGesture(); setMode("navigate"); setHoverHandle(null); }}><Hand size={14} aria-hidden="true" /> Navigate</button>
+          <button id="crop-mode-select" type="button" aria-pressed={mode === "select"} disabled={disabled} title="Select a proposal with a click, or drag crop handles. Space + drag temporarily pans." onClick={() => { cancelGesture(); setMode("select"); }}><MousePointer2 size={14} aria-hidden="true" /> Select / Crop</button>
+        </div>
+        {focusSavedCropStart && <button id="focus-segment-start" type="button" disabled={viewport.width <= 0 || viewport.height <= 0} onClick={() => pan.focusRegionStart(crop)}>Segment start</button>}
         <button type="button" onClick={() => pan.zoomBy(1 / ZOOM_STEP)} title="Zoom out">
           −
         </button>
@@ -360,13 +410,20 @@ export function TrackCropper({
       <div className={styles.stageRow}>
         <div
           ref={stageRef}
+          tabIndex={0}
+          role="region"
+          aria-label="Source crop canvas"
+          data-interaction-mode={mode}
           className={`${styles.stage} ${pan.isPanning ? styles.stagePanning : ""}`}
           style={{ cursor: pan.isPanning ? "grabbing" : cursor }}
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
-          onPointerCancel={handlePointerUp}
-          onPointerLeave={() => setHoverHandle(null)}
+          onPointerCancel={cancelPointer}
+          onLostPointerCapture={cancelPointer}
+          onPointerEnter={temporaryPan.onPointerEnter}
+          onPointerLeave={() => { setHoverHandle(null); temporaryPan.onPointerLeave(); }}
+          onKeyDown={stageKeyDown}
           onDoubleClick={handleDoubleClick}
         >
           <canvas ref={canvasRef} className={styles.canvas} />
@@ -443,7 +500,7 @@ export function TrackCropper({
             />
           ))}
 
-          {[...EDGE_HANDLES, ...CORNER_HANDLES].map((handle) => (
+          {mode === "select" && !disabled && [...EDGE_HANDLES, ...CORNER_HANDLES].map((handle) => (
             <CropHandleButton
               key={handle}
               handle={handle}
@@ -469,9 +526,11 @@ export function TrackCropper({
         </div>
 
       {!compact && <p className={styles.hint}>
-        Drag the image to pan, scroll to zoom at the pointer, double-click to zoom
-        in. Drag a handle to set an edge; arrow keys nudge it by one pixel, Shift
-        by {NUDGE_COARSE_PX}. Panning and zooming never change the selection —
+        Navigate is the safe default. Scroll to travel; Shift + scroll moves horizontally;
+        Ctrl/Cmd + scroll or pinch zooms at the pointer. Double-click zooms only in Navigate.
+        Select / Crop enables proposal clicks and handle edits. Space + drag or middle mouse
+        always pans. Focus a crop edge and use arrow keys to nudge one pixel, Shift
+        by {NUDGE_COARSE_PX}. Escape cancels the active gesture. Navigation never changes the crop —
         the four numbers above are raster pixels of the original scan.
       </p>}
     </div>

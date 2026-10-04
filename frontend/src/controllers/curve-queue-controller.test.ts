@@ -62,8 +62,8 @@ describe("sequential unified curve queue", () => {
   it("rejects mismatched identity without silently replacing mnemonic or units", async () => {
     const collection = collectionFixture(); collection.segments[1].job.calibration!.mnemonic = "SP";
     const gateway = { getJob: vi.fn(), startSegmentation: vi.fn() };
-    expect(identityIssue(collection)).toContain("deben coincidir");
-    await expect(processCurveQueue(collection, gateway, vi.fn(), vi.fn(), new AbortController().signal)).rejects.toThrow("deben coincidir");
+    expect(identityIssue(collection)).toContain("must match");
+    await expect(processCurveQueue(collection, gateway, vi.fn(), vi.fn(), new AbortController().signal)).rejects.toThrow("must match");
     expect(gateway.getJob).not.toHaveBeenCalled(); expect(collection.segments[1].job.calibration!.mnemonic).toBe("SP");
   });
   it("does not start another task after unmount/cancellation", async () => {

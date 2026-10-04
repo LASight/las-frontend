@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 
+import { BrandMark } from "../brand-mark";
 import styles from "./auth-layout.module.css";
 
 /**
@@ -23,7 +24,7 @@ export function AuthLayout({ title, subtitle, children, footer }: Props) {
     <div className={styles.page}>
       <main className={styles.card}>
         <div className={styles.brand}>
-          <div className={styles.logoMark}>W</div>
+          <BrandMark className={styles.logoMark} decorative />
           <span className={styles.appName}>WellSight</span>
         </div>
 

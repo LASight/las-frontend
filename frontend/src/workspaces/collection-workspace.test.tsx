@@ -7,6 +7,7 @@ import { collectionQueryKey } from "../hooks/use-collection";
 import { collectionGateway } from "../services/collection-service";
 import { digitizationGateway } from "../services/digitization-service";
 import { API_BASE, ApiError } from "../services/http-client";
+import { accountDraftKey, endAccountSession, setSessionAccount } from "../services/session-scope";
 import { collectionFixture } from "../test-fixtures/collection-fixtures";
 import { CollectionSummaryPage } from "./collection-workspace";
 import routerSource from "../app-router.tsx?raw";
@@ -51,7 +52,7 @@ async function select(value: string, index = 0) {
 describe("collection UI with HTTP fixtures, not scientific integration evidence", () => {
   beforeEach(() => {
     (globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
-    localStorage.clear(); vi.clearAllMocks();
+    localStorage.clear(); vi.clearAllMocks(); setSessionAccount("account-a");
     summary = collectionFixture();
     host = document.createElement("div"); document.body.appendChild(host); root = createRoot(host);
     client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -80,36 +81,72 @@ describe("collection UI with HTTP fixtures, not scientific integration evidence"
     expect(host.textContent).toContain("Operator title");
     expect(host.textContent).not.toContain("Individual job wizard");
     expect(host.querySelector("select")!.value).toBe("");
-    expect(button("Descargar LAS").disabled).toBe(true);
-    expect(button("Analizar curva").disabled).toBe(true);
+    expect(button("Download LAS").disabled).toBe(true);
+    expect(button("Analyze curve").disabled).toBe(true);
     expect(collectionGateway.exportLas).not.toHaveBeenCalled();
     expect((host.querySelector("#collection-header-well") as HTMLInputElement).value).toBe("");
   });
+
+  it("isolates overlap/output drafts by account without removing A's saved preferences", async () => {
+    await render(); await select("first");
+    const input = host.querySelector("#collection-header-well") as HTMLInputElement;
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!.call(input, "Private well A");
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    const overlapA = accountDraftKey("collection", API_BASE, "collection")!, outputA = accountDraftKey("output", API_BASE, "collection")!;
+    const storedOverlap = localStorage.getItem(overlapA), storedOutput = localStorage.getItem(outputA);
+    await act(async () => root.unmount()); client.clear(); root = createRoot(host);
+    endAccountSession(); setSessionAccount("account-b");
+    client = new QueryClient({ defaultOptions: { queries: { retry: false } } }); await render();
+    expect(host.querySelector("select")!.value).toBe(""); expect((host.querySelector("#collection-header-well") as HTMLInputElement).value).toBe("");
+    expect(localStorage.getItem(overlapA)).toBe(storedOverlap); expect(localStorage.getItem(outputA)).toBe(storedOutput);
+    await act(async () => root.unmount()); client.clear(); root = createRoot(host);
+    endAccountSession(); setSessionAccount("account-a");
+    client = new QueryClient({ defaultOptions: { queries: { retry: false } } }); await render();
+    expect(host.querySelector("select")!.value).toBe("first"); expect((host.querySelector("#collection-header-well") as HTMLInputElement).value).toBe("Private well A");
+  });
+
+  it("does not adopt older result drafts until explicit fresh-access recovery", async () => {
+    const overlapKey = `digitization-collection-draft:${API_BASE}:collection`, outputKey = `digitization-output-draft:${API_BASE}:collection`;
+    const overlap = JSON.stringify({ choices: { "overlap-a": "second" }, conflicts: { "overlap-a": '[50,100,["first","second"]]' } });
+    const header = { well: "Older declared well", company: "", field_name: "", location: "", county: "", state: "", country: "", api: "", uwi: "" };
+    const output = JSON.stringify({ header, step: .25 });
+    localStorage.setItem(overlapKey, overlap); localStorage.setItem(outputKey, output);
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    await render();
+    expect(host.querySelector("select")!.value).toBe(""); expect((host.querySelector("#collection-header-well") as HTMLInputElement).value).toBe("");
+    await click("Recover older overlap draft"); await click("Recover older output draft");
+    expect(host.querySelector("select")!.value).toBe("second"); expect((host.querySelector("#collection-header-well") as HTMLInputElement).value).toBe("Older declared well");
+    expect((host.querySelector("#collection-depth-step") as HTMLInputElement).value).toBe("0.25");
+    expect(localStorage.getItem(overlapKey)).toBe(overlap); expect(localStorage.getItem(outputKey)).toBe(output);
+    expect(collectionGateway.exportLas).not.toHaveBeenCalled(); expect(collectionGateway.sendToAnalysis).not.toHaveBeenCalled();
+  });
   it("downloads after explicit selection using fingerprint and conflict IDs", async () => {
-    await render(); await select("second"); await click("Descargar LAS");
+    await render(); await select("second"); await click("Download LAS");
     expect(collectionGateway.exportLas).toHaveBeenCalledWith("collection", expect.objectContaining({
       overlap_choices: { "overlap-a": "second" }, expected_revision: "fingerprint-v1", step: 0.5,
       header: expect.objectContaining({ well: "" }),
     }));
-    expect(host.textContent).toContain("Vista previa LAS");
+    expect(host.textContent).toContain("LAS preview");
     expect(digitizationGateway.setEdits).not.toHaveBeenCalled();
   });
   it("requires a choice for every two-way or three-way conflict", async () => {
     summary.overlaps.push({ conflict_id: "triple", depth_top: 80, depth_bottom: 90, job_ids: ["first", "second", "third"] });
     summary.segments.push({ ...summary.segments[1], job_id: "third", label: "Third", job: { ...summary.segments[1].job, job_id: "third" } });
     await render(); await select("first");
-    expect(button("Descargar LAS").disabled).toBe(true);
+    expect(button("Download LAS").disabled).toBe(true);
     await select("third", 1);
-    expect(button("Descargar LAS").disabled).toBe(false);
+    expect(button("Download LAS").disabled).toBe(false);
   });
   it("refreshes a stale revision without retrying or losing unchanged conflict choices", async () => {
     await render(); await select("second");
     summary.revision = "fingerprint-v2";
-    await click("Descargar LAS");
+    await click("Download LAS");
     expect(collectionGateway.exportLas).not.toHaveBeenCalled();
-    expect(host.textContent).toContain("Collection changed");
+    expect(host.textContent).toContain("Curve changed");
     expect(host.querySelector("select")!.value).toBe("second");
-    await click("Descargar LAS");
+    await click("Download LAS");
     expect(collectionGateway.exportLas).toHaveBeenCalledTimes(1);
     expect(collectionGateway.exportLas).toHaveBeenCalledWith("collection", expect.objectContaining({ expected_revision: "fingerprint-v2" }));
   });
@@ -119,23 +156,23 @@ describe("collection UI with HTTP fixtures, not scientific integration evidence"
       summary.revision = "fingerprint-v2"; summary.overlaps[0].depth_bottom = 95;
       throw new ApiError(409, "Stale collection revision");
     });
-    await click("Descargar LAS"); await tick();
+    await click("Download LAS"); await tick();
     expect(host.textContent).toContain("Stale collection revision");
     expect(host.querySelector("select")!.value).toBe("");
-    expect(button("Descargar LAS").disabled).toBe(true);
+    expect(button("Download LAS").disabled).toBe(true);
     expect(collectionGateway.exportLas).toHaveBeenCalledTimes(1);
   });
   it("persists decisions as a collection-specific local draft across reload", async () => {
     await render(); await select("first");
-    expect(JSON.parse(localStorage.getItem(`digitization-collection-draft:${API_BASE}:collection`)!).choices).toEqual({ "overlap-a": "first" });
+    expect(JSON.parse(localStorage.getItem(accountDraftKey("collection", API_BASE, "collection")!)!).choices).toEqual({ "overlap-a": "first" });
     await act(async () => root.unmount()); client.clear(); root = createRoot(host);
     client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     await render();
     expect(host.querySelector("select")!.value).toBe("first");
-    expect(button("Descargar LAS").disabled).toBe(false);
+    expect(button("Download LAS").disabled).toBe(false);
   });
   it("does not reuse a different collection's draft", async () => {
-    localStorage.setItem(`digitization-collection-draft:${API_BASE}:other-collection`, JSON.stringify({ choices: { "overlap-a": "first" }, conflicts: { "overlap-a": '[50,100,["first","second"]]' } }));
+    localStorage.setItem(accountDraftKey("collection", API_BASE, "other-collection")!, JSON.stringify({ choices: { "overlap-a": "first" }, conflicts: { "overlap-a": '[50,100,["first","second"]]' } }));
     await render(); expect(host.querySelector("select")!.value).toBe("");
   });
   it("blocks incompatible or unfinished members and server-reported issues", async () => {
@@ -143,10 +180,10 @@ describe("collection UI with HTTP fixtures, not scientific integration evidence"
     summary.segments[1].job.phase = "segmenting";
     summary.issues = ["Server says not ready"];
     await render(); await select("first");
-    expect(host.textContent).toContain("Tramos requieren atención");
+    expect(host.textContent).toContain("Segments need attention");
     expect(host.textContent).toContain("Server says not ready");
     expect(host.textContent).toContain("must match");
-    expect(button("Descargar LAS").disabled).toBe(true);
+    expect(button("Download LAS").disabled).toBe(true);
   });
   it("blocks tiny steps before making export requests", async () => {
     await render(); await select("first");
@@ -156,34 +193,34 @@ describe("collection UI with HTTP fixtures, not scientific integration evidence"
       element.dispatchEvent(new Event("input", { bubbles: true }));
     }); await tick();
     expect(host.textContent).toContain("1,000,000 output rows");
-    expect(button("Descargar LAS").disabled).toBe(true);
+    expect(button("Download LAS").disabled).toBe(true);
   });
   it("waits for a recovered job-specific draft and blocks output on save failure", async () => {
-    localStorage.setItem(`digitization-review-draft:${API_BASE}:second`, JSON.stringify({ edits: [{ kind: "discard", y0: 0, y1: 1 }], edits_revision: 0 }));
+    localStorage.setItem(accountDraftKey("review", API_BASE, "second")!, JSON.stringify({ edits: [{ kind: "discard", y0: 0, y1: 1 }], edits_revision: 0 }));
     vi.mocked(digitizationGateway.setEdits).mockRejectedValueOnce(new Error("Corrections offline"));
-    await render(); await select("second"); await click("Descargar LAS");
+    await render(); await select("second"); await click("Download LAS");
     expect(digitizationGateway.setEdits).toHaveBeenCalledWith("second", [{ kind: "discard", y0: 0, y1: 1 }], 0);
     expect(collectionGateway.exportLas).not.toHaveBeenCalled();
     expect(host.textContent).toContain("Corrections offline");
-    expect(localStorage.getItem(`digitization-review-draft:${API_BASE}:second`)).not.toBeNull();
+    expect(localStorage.getItem(accountDraftKey("review", API_BASE, "second")!)).not.toBeNull();
   });
   it("waits for successful durable saves and asks to review the resulting fresh revision", async () => {
-    localStorage.setItem(`digitization-review-draft:${API_BASE}:second`, JSON.stringify({ edits: [{ kind: "discard", y0: 0, y1: 1 }], edits_revision: 0 }));
+    localStorage.setItem(accountDraftKey("review", API_BASE, "second")!, JSON.stringify({ edits: [{ kind: "discard", y0: 0, y1: 1 }], edits_revision: 0 }));
     let acknowledge!: (job: typeof summary.segments[number]["job"]) => void;
     vi.mocked(digitizationGateway.setEdits).mockReturnValueOnce(new Promise((resolve) => { acknowledge = resolve; }));
-    await render(); await select("second"); await click("Descargar LAS");
+    await render(); await select("second"); await click("Download LAS");
     expect(collectionGateway.exportLas).not.toHaveBeenCalled();
     summary.revision = "fingerprint-saved-edits";
     await act(async () => acknowledge({ ...summary.segments[1].job, edits_revision: 1 })); await tick();
     expect(collectionGateway.exportLas).not.toHaveBeenCalled();
-    expect(host.textContent).toContain("Collection changed");
+    expect(host.textContent).toContain("Curve changed");
     expect(host.querySelector("select")!.value).toBe("second");
-    await click("Descargar LAS");
+    await click("Download LAS");
     expect(collectionGateway.exportLas).toHaveBeenCalledWith("collection", expect.objectContaining({ expected_revision: "fingerprint-saved-edits" }));
   });
   it("navigates to the returned analysis ID and invalidates history", async () => {
     const invalidate = vi.spyOn(client, "invalidateQueries");
-    await render(); await select("second"); await click("Analizar curva");
+    await render(); await select("second"); await click("Analyze curve");
     expect(collectionGateway.sendToAnalysis).toHaveBeenCalledWith("collection", expect.objectContaining({ overlap_choices: { "overlap-a": "second" }, expected_revision: "fingerprint-v1" }));
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ["history"] });
     expect(host.textContent).toContain("/analysis?analysis=analysis-id");

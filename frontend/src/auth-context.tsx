@@ -3,6 +3,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -16,6 +17,7 @@ import type {
 } from "./models/auth-models";
 import { authGateway } from "./services/auth-service";
 import { getAccessToken, onSessionChange } from "./services/token-store";
+import { endAccountSession, getSessionScope, isCurrentSession, setSessionAccount } from "./services/session-scope";
 
 /**
  * Who is signed in, for everything below the router.
@@ -46,6 +48,7 @@ type AuthStatus = "restoring" | "authenticated" | "anonymous";
 type AuthValue = {
   user: User | null;
   status: AuthStatus;
+  sessionGeneration: number;
   signup: (request: SignupRequest) => Promise<void>;
   login: (credentials: Credentials) => Promise<void>;
   logout: () => Promise<void>;
@@ -58,19 +61,22 @@ const AuthContext = createContext<AuthValue | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [status, setStatus] = useState<AuthStatus>("restoring");
+  const operation = useRef(0);
 
   useEffect(() => {
     let cancelled = false;
+    const request = operation.current;
 
     authGateway
       .restore()
       .then((restored) => {
-        if (cancelled) return;
+        if (cancelled || operation.current !== request) return;
+        if (restored) setSessionAccount(restored.user_id);
         setUser(restored);
         setStatus(restored ? "authenticated" : "anonymous");
       })
       .catch(() => {
-        if (cancelled) return;
+        if (cancelled || operation.current !== request) return;
         setUser(null);
         setStatus("anonymous");
       });
@@ -90,6 +96,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Only react to the session being *cleared*. This also fires on every
         // successful refresh, which must not sign anyone out.
         if (getAccessToken() !== null) return;
+        operation.current++;
         setUser(null);
         setStatus("anonymous");
       }),
@@ -97,27 +104,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const signup = useCallback(async (request: SignupRequest) => {
-    setUser(await authGateway.signup(request));
+    const current = ++operation.current;
+    const next = await authGateway.signup(request);
+    if (current !== operation.current) return;
+    setSessionAccount(next.user_id);
+    setUser(next);
     setStatus("authenticated");
   }, []);
 
   const login = useCallback(async (credentials: Credentials) => {
-    setUser(await authGateway.login(credentials));
+    const current = ++operation.current;
+    const next = await authGateway.login(credentials);
+    if (current !== operation.current) return;
+    setSessionAccount(next.user_id);
+    setUser(next);
     setStatus("authenticated");
   }, []);
 
   const logout = useCallback(async () => {
-    await authGateway.logout();
+    operation.current++;
+    // Invalidate pending work before awaiting network revocation (also for mocks).
+    endAccountSession();
     setUser(null);
     setStatus("anonymous");
+    await authGateway.logout();
   }, []);
 
   const updateProfile = useCallback(async (update: ProfileUpdate) => {
-    setUser(await authGateway.updateProfile(update));
+    const session = getSessionScope();
+    const next = await authGateway.updateProfile(update);
+    if (isCurrentSession(session)) setUser(next);
   }, []);
 
   const changePassword = useCallback(async (change: PasswordChange) => {
+    const request = operation.current;
     await authGateway.changePassword(change);
+    if (request !== operation.current) return;
+    endAccountSession();
     // The backend revokes every session, so the user is signed out by design.
     setUser(null);
     setStatus("anonymous");
@@ -125,7 +148,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, status, signup, login, logout, updateProfile, changePassword }}
+      value={{ user, status, sessionGeneration: getSessionScope().generation, signup, login, logout, updateProfile, changePassword }}
     >
       {children}
     </AuthContext.Provider>

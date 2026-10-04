@@ -6,6 +6,8 @@ import type { EditStats } from "../../controllers/curve-edit-controller";
 import type { CurveEdit, JobSummary } from "../../models/digitization-models";
 import type { ReviewTool } from "../../hooks/use-curve-review";
 import styles from "./curve-review-panel.module.css";
+import { PredictionControls, type PredictionControlsProps } from "./prediction-controls";
+import { REVIEW_TOOLS } from "./review-tools";
 
 /**
  * Tools, corrections and quality figures for the review step.
@@ -21,7 +23,7 @@ import styles from "./curve-review-panel.module.css";
  * to know how much of it was invented.
  */
 
-type Props = {
+type Props = PredictionControlsProps & {
   job: JobSummary;
   tool: ReviewTool;
   onToolChange: (tool: ReviewTool) => void;
@@ -37,12 +39,6 @@ type Props = {
   status: string;
 };
 
-const TOOLS: Array<{ id: ReviewTool; label: string; hint: string }> = [
-  { id: "inspect", label: "Inspect", hint: "Read depth and value under the pointer" },
-  { id: "redraw", label: "Redraw", hint: "Drag along the true trace to replace it" },
-  { id: "discard", label: "Discard", hint: "Drag a depth range to mark it unrecovered" },
-];
-
 export function CurveReviewPanel({
   job,
   tool,
@@ -57,6 +53,7 @@ export function CurveReviewPanel({
   onReset,
   onJumpToRow,
   status,
+  showPrediction, onShowPredictionChange, predictionOpacity, onPredictionOpacityChange,
 }: Props) {
   const calibration = job.calibration;
   const cropHeight = job.crop ? job.crop.y_bottom - job.crop.y_top : 0;
@@ -72,22 +69,24 @@ export function CurveReviewPanel({
       <div className={styles.group}>
         <span className={styles.groupTitle}>Tool</span>
         <div className={styles.toolRow}>
-          {TOOLS.map((entry) => (
+          {REVIEW_TOOLS.map((entry) => (
             <button
               key={entry.id}
               type="button"
               title={entry.hint}
+              aria-pressed={tool === entry.id}
               className={`${styles.toolBtn} ${tool === entry.id ? styles.toolActive : ""}`}
               onClick={() => onToolChange(entry.id)}
             >
-              {entry.label}
+              <entry.icon size={14} aria-hidden="true" /> {entry.label}
             </button>
           ))}
         </div>
-        <p className={styles.hint}>{TOOLS.find((t) => t.id === tool)?.hint}</p>
+        <p className={styles.hint}>{REVIEW_TOOLS.find((t) => t.id === tool)?.hint}</p>
       </div>
 
       <div className={styles.group}>
+        <PredictionControls showPrediction={showPrediction} onShowPredictionChange={onShowPredictionChange} predictionOpacity={predictionOpacity} onPredictionOpacityChange={onPredictionOpacityChange} />
         <label className={styles.checkRow}>
           <input
             type="checkbox"

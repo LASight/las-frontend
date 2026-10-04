@@ -1,0 +1,10 @@
+.wrapper { position: relative; min-width: 0; }
+.inputRow { display: flex; align-items: stretch; }
+.inputRow input { min-width: 0; border-top-right-radius: 0; border-bottom-right-radius: 0; }
+.toggle { border: 1px solid var(--line-strong); border-left: 0; background: var(--surface-inset); color: var(--muted); border-radius: 0 var(--radius-control) var(--radius-control) 0; min-width: 28px; cursor: pointer; display: grid; place-items: center; }
+.popup { position: absolute; z-index: 30; top: calc(100% + 3px); left: 0; right: 0; min-width: 225px; max-height: 260px; overflow-y: auto; background: var(--surface-raised); border: 1px solid var(--line-strong); box-shadow: 0 6px 14px rgba(0,0,0,.2); padding: 3px; border-radius: var(--radius-control); }
+.option { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; padding: 8px; border: 0; background: transparent; color: var(--ink); font: inherit; font-size: 11px; text-align: left; cursor: pointer; }
+.option[aria-selected="true"], .option:hover { background: var(--sb-active); }
+.option code { font-family: var(--font-data); color: var(--accent-teal); font-size: 11px; }
+.custom { border-top: 1px solid var(--line); color: var(--muted); }
+.hint { padding: 6px 8px; font-size: 10px; color: var(--muted); }

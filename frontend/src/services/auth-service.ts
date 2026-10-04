@@ -8,6 +8,7 @@ import type {
 } from "../models/auth-models";
 import { apiRequest, apiRequestVoid, patchJson, postJson } from "./http-client";
 import { clearSession, getRefreshToken, setSession } from "./token-store";
+import { getSessionScope, isCurrentSession, setSessionAccount } from "./session-scope";
 
 /**
  * Everything the app needs from an authentication backend.
@@ -47,11 +48,17 @@ const BASE = "/api/auth";
 /** Talks to the FastAPI auth router. */
 export class HttpAuthGateway implements AuthGateway {
   async signup(request: SignupRequest): Promise<User> {
-    return this.#establish(await postJson<AuthResponse>(`${BASE}/signup`, request));
+    const session = getSessionScope();
+    const response = await postJson<AuthResponse>(`${BASE}/signup`, request);
+    if (!isCurrentSession(session)) throw new Error("Session changed. Please sign in again.");
+    return this.#establish(response);
   }
 
   async login(credentials: Credentials): Promise<User> {
-    return this.#establish(await postJson<AuthResponse>(`${BASE}/login`, credentials));
+    const session = getSessionScope();
+    const response = await postJson<AuthResponse>(`${BASE}/login`, credentials);
+    if (!isCurrentSession(session)) throw new Error("Session changed. Please sign in again.");
+    return this.#establish(response);
   }
 
   async logout(): Promise<void> {
@@ -96,11 +103,13 @@ export class HttpAuthGateway implements AuthGateway {
   }
 
   async changePassword(change: PasswordChange): Promise<void> {
+    const session = getSessionScope();
     await apiRequestVoid(`${BASE}/me/password`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(change),
     });
+    if (!isCurrentSession(session)) return;
     // The backend revokes every session on a password change, including this
     // one. Clearing here means the UI reflects that immediately instead of
     // discovering it on the next request.
@@ -108,6 +117,7 @@ export class HttpAuthGateway implements AuthGateway {
   }
 
   #establish(response: AuthResponse): User {
+    setSessionAccount(response.user.user_id);
     setSession(response.tokens);
     return response.user;
   }
