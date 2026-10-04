@@ -13,6 +13,7 @@ import {
 import { NavLink, useNavigate } from "react-router-dom";
 
 import { useAuth } from "../auth-context";
+import { BrandMark } from "./brand-mark";
 import styles from "./sidebar.module.css";
 
 /**
@@ -91,7 +92,7 @@ export function Sidebar({
     <nav className={`${styles.sidebar} ${collapsed ? styles.collapsed : ""}`}>
       <div className={styles.sbTop}>
         <div className={styles.logoArea}>
-          <div className={styles.logoMark}>W</div>
+          <BrandMark className={styles.logoMark} />
           <span className={styles.appName}>WellSight</span>
         </div>
         <button

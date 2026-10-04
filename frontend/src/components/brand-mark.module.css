@@ -1,0 +1,11 @@
+/* The Argentinosaurus mark, masked from one shared vector so every place that
+ * shows it — the sidebar, the auth brand, the sign-in hero — recolors it with
+ * plain CSS instead of keeping separate colored copies of the asset. */
+
+.mark {
+  display: inline-block;
+  flex-shrink: 0;
+  background: var(--brand-mark-fill, currentColor);
+  -webkit-mask: url("./../assets/brand/argentinosaurus.svg") center / contain no-repeat;
+  mask: url("./../assets/brand/argentinosaurus.svg") center / contain no-repeat;
+}

@@ -1,48 +1,101 @@
-/* The signed-out frame: one centred card on the app background.
+/* The signed-out frame: a dark hero next to a light form panel, split
+ * roughly 60/40 with the form on the narrow side.
  *
- * Deliberately outside `app.module.css`'s sidebar layout. There is no workspace
- * to switch to and no status to report before signing in, and rendering the
- * chrome around a login form would offer navigation that cannot go anywhere. */
+ * Deliberately outside `app.module.css`'s sidebar layout. There is no
+ * workspace to switch to and no status to report before signing in, and
+ * rendering the chrome around a login form would offer navigation that
+ * cannot go anywhere. The hero borrows the sidebar's own dark palette
+ * (`--sb-*`) and teal accents, so this is recognisably the same product a
+ * user is about to sign into, not a separate marketing page. */
 
 .page {
   min-height: 100vh;
+  display: grid;
+  grid-template-columns: 3fr 2fr;
+}
+
+/* ── Hero (60%) ──────────────────────────────────────────────── */
+/* A centered composition on purpose: the wordmark anchors the top, the mark
+   is the thing the eye lands on, and the copy sits underneath it — rather
+   than three competing elements scattered across the panel. */
+.hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 3rem 3rem 3.5rem;
+  background:
+    radial-gradient(ellipse 900px 700px at 50% 35%, rgba(56, 185, 217, 0.22), transparent 60%),
+    linear-gradient(165deg, var(--sb-bg) 0%, var(--sb-bg-deep) 100%);
+  color: var(--sb-ink);
+}
+
+.heroWordmark {
+  font-size: clamp(1.6rem, 2vw + 1rem, 2.4rem);
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  color: #ffffff;
+}
+
+/* Auto top/bottom margins center it in the leftover space between the
+   wordmark above and the copy below — the dinosaur, not either piece of
+   text, is the focal point of the hero. */
+.heroMark {
+  margin: auto 0;
+  width: min(42%, 340px);
+  aspect-ratio: 705 / 910.6;
+  height: auto;
+  --brand-mark-fill: linear-gradient(160deg, var(--accent-teal) 0%, var(--accent-teal-2) 100%);
+  filter: drop-shadow(0 0 60px rgba(56, 185, 217, 0.35));
+}
+
+.heroCopy {
+  max-width: 28rem;
+}
+
+.heroHeadline {
+  font-size: clamp(1.5rem, 2.2vw + 0.8rem, 2.15rem);
+  line-height: 1.25;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0 0 0.75rem;
+}
+
+.heroTagline {
+  font-size: 0.92rem;
+  line-height: 1.55;
+  color: var(--sb-muted);
+  margin: 0;
+}
+
+/* ── Form panel (40%) ────────────────────────────────────────── */
+.panel {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 2rem 1rem;
-  background: var(--body-bg);
-}
-
-.card {
-  width: 100%;
-  max-width: 420px;
+  overflow-y: auto;
+  padding: 2.5rem 1.5rem;
   background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  padding: 1.75rem;
-  box-shadow: 0 12px 32px rgba(30, 37, 51, 0.08);
 }
 
-/* ── Brand ───────────────────────────────────────────────────── */
+.formWrap {
+  width: 100%;
+  max-width: 380px;
+}
+
+/* Shown only when the hero is hidden (narrow viewports), so the product
+   identity survives losing the illustration. */
 .brand {
-  display: flex;
+  display: none;
   align-items: center;
   gap: 0.6rem;
-  margin-bottom: 1.35rem;
+  margin-bottom: 1.5rem;
 }
 
-/* Same mark as the sidebar's, so the page a user meets first is recognisably
-   the same product as the one behind it. */
-.logoMark {
-  width: 34px;
-  height: 34px;
-  border-radius: 9px;
-  display: grid;
-  place-items: center;
-  font-weight: 800;
-  font-size: 1rem;
-  color: #06222b;
-  background: linear-gradient(135deg, var(--accent-teal), var(--accent-teal-2));
+.brandIcon {
+  width: 30px;
+  height: 30px;
+  --brand-mark-fill: linear-gradient(135deg, var(--accent-teal), var(--accent-teal-2));
 }
 
 .appName {
@@ -52,16 +105,16 @@
 }
 
 .title {
-  font-size: 1.15rem;
+  font-size: 1.55rem;
   font-weight: 700;
   color: var(--ink);
-  margin-bottom: 0.3rem;
+  margin-bottom: 0.4rem;
 }
 
 .subtitle {
-  margin: 0 0 1.25rem;
-  font-size: 0.83rem;
-  line-height: 1.5;
+  margin: 0 0 1.75rem;
+  font-size: 0.85rem;
+  line-height: 1.55;
   color: var(--muted);
 }
 
@@ -73,21 +126,26 @@
 
 .submit {
   width: 100%;
-  margin-top: 0.35rem;
-  padding: 0.6rem 1rem;
-  border-radius: 7px;
+  margin-top: 0.4rem;
+  padding: 0.7rem 1rem;
+  border-radius: 8px;
   border: 1px solid transparent;
   background: var(--accent-teal);
   color: #06222b;
-  font-size: 0.9rem;
+  font-size: 0.92rem;
   font-weight: 600;
   font-family: inherit;
   cursor: pointer;
-  transition: background 130ms;
+  transition: background 130ms, box-shadow 130ms;
 }
 
 .submit:hover:not(:disabled) {
   background: var(--accent-teal-2);
+}
+
+.submit:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(56, 185, 217, 0.35);
 }
 
 .submit:disabled {
@@ -96,8 +154,8 @@
 }
 
 .switch {
-  margin: 1.15rem 0 0;
-  padding-top: 1rem;
+  margin: 1.35rem 0 0;
+  padding-top: 1.1rem;
   border-top: 1px solid var(--line);
   font-size: 0.82rem;
   color: var(--muted);
@@ -116,8 +174,30 @@
 
 /* Shown while the stored session is being exchanged for a live one. Not a
    spinner: the exchange is one request and a flash of a loading state is more
-   distracting than an empty frame. */
+   distracting than an empty frame. Same split background as the real page so
+   a reload doesn't flash a plain background before the form mounts. */
 .restoring {
   min-height: 100vh;
-  background: var(--body-bg);
+  background:
+    radial-gradient(ellipse 900px 700px at 78% 30%, rgba(56, 185, 217, 0.22), transparent 60%),
+    linear-gradient(165deg, var(--sb-bg) 0%, var(--sb-bg-deep) 100%);
+}
+
+/* ── Narrow viewports: one column, hero dropped ─────────────── */
+@media (max-width: 900px) {
+  .page {
+    grid-template-columns: 1fr;
+  }
+
+  .hero {
+    display: none;
+  }
+
+  .brand {
+    display: flex;
+  }
+
+  .panel {
+    padding: 2.5rem 1.25rem;
+  }
 }

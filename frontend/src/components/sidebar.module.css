@@ -41,16 +41,9 @@
 }
 
 .logoMark {
-  width: 28px;
-  height: 28px;
-  border-radius: 6px;
-  background: #3d9ec8;
-  display: grid;
-  place-items: center;
-  font-size: 0.85rem;
-  font-weight: 700;
-  color: #ffffff;
-  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  --brand-mark-fill: linear-gradient(135deg, var(--accent-teal), var(--accent-teal-2));
 }
 
 .appName {
