@@ -202,6 +202,9 @@ export interface ExportRequest {
 /** Full job state — what the wizard rehydrates from on every page load. */
 export interface JobSummary {
   job_id: string;
+  /** Optional for compatibility with standalone jobs and older servers. */
+  collection_id?: string | null;
+  segment_label?: string | null;
   phase: DigitizationPhase;
   file_name: string;
   created_at: number;
@@ -228,6 +231,31 @@ export interface SendToAnalysisResponse {
   analysis_id: string;
   well_count: number;
   file_name: string;
+}
+
+export interface CollectionOverlap {
+  conflict_id: string;
+  depth_top: number;
+  depth_bottom: number;
+  job_ids: string[];
+}
+
+export interface CollectionSummary {
+  collection_id: string;
+  source_job_id: string;
+  title: string;
+  /** Stable fingerprint, NOT the numeric edits_revision of an individual job. */
+  revision: string;
+  segments: Array<{ job_id: string; label: string; job: JobSummary }>;
+  overlaps: CollectionOverlap[];
+  issues: string[];
+}
+
+export interface CollectionExportRequest {
+  header: LasHeaderFields;
+  step: number;
+  overlap_choices: Record<string, string>;
+  expected_revision?: string;
 }
 
 export interface DigitizationHealth {

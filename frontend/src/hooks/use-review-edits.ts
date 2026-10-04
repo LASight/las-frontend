@@ -10,22 +10,36 @@ import { jobQueryKey } from "./use-digitization-job";
 const stores = new WeakMap<QueryClient, Map<string, ReviewEditsStore>>();
 const empty = new ReviewEditsStore([], async () => undefined, "");
 
+function jobEditsStore(client: QueryClient, job: JobSummary): ReviewEditsStore {
+  let jobs = stores.get(client);
+  if (!jobs) { jobs = new Map(); stores.set(client, jobs); }
+  let state = jobs.get(job.job_id);
+  if (!state) {
+    let storage: Storage | undefined;
+    try { storage = window.localStorage; } catch { /* Private browsing. */ }
+    state = new ReviewEditsStore(job.edits ?? [],
+      async (edits, revision) => (await digitizationGateway.setEdits(job.job_id, edits, revision)).edits_revision,
+      `digitization-review-draft:${API_BASE}:${job.job_id}`, storage, job.edits_revision);
+    jobs.set(job.job_id, state);
+  }
+  return state;
+}
+
+/** Collection export must await each member's own durable overlay, including a
+ * recovered local draft. Never send one segment's edits to a different job. */
+export async function flushCollectionEdits(client: QueryClient, jobs: JobSummary[]): Promise<void> {
+  await Promise.all(jobs.map(async (job) => {
+    const store = jobEditsStore(client, job);
+    store.reconcile(job.edits ?? [], job.edits_revision);
+    await store.flush();
+  }));
+}
+
 export function useReviewEdits(job: JobSummary | null) {
   const client = useQueryClient();
   const store = useMemo(() => {
     if (!job) return empty;
-    let jobs = stores.get(client);
-    if (!jobs) { jobs = new Map(); stores.set(client, jobs); }
-    let state = jobs.get(job.job_id);
-    if (!state) {
-      let storage: Storage | undefined;
-      try { storage = window.localStorage; } catch { /* Private browsing. */ }
-      state = new ReviewEditsStore(job.edits ?? [],
-        async (edits, revision) => (await digitizationGateway.setEdits(job.job_id, edits, revision)).edits_revision,
-        `digitization-review-draft:${API_BASE}:${job.job_id}`, storage, job.edits_revision);
-      jobs.set(job.job_id, state);
-    }
-    return state;
+    return jobEditsStore(client, job);
   }, [client, job?.job_id]);
   const state = useSyncExternalStore(store.subscribe, store.getSnapshot);
   useEffect(() => {

@@ -13,6 +13,7 @@ import {
 } from "../controllers/digitization-job-controller";
 import { useDigitizationJob } from "../hooks/use-digitization-job";
 import { DigitizationJobProvider } from "../components/digitization/job-context";
+import { SegmentsPanel } from "../components/digitization/segments-panel";
 
 /**
  * Shell for the digitization wizard: loads the job named in the URL and renders
@@ -46,12 +47,14 @@ export function DigitizationWorkspace() {
           <WizardStepper steps={steps} />
         </SectionPanel>
 
+        {job && <SegmentsPanel key={`segment-panel:${job.job_id}`} job={job} />}
+
         {controller.error ? (
           <SectionPanel title="Job unavailable">
             <p className={styles.errorText}>{controller.error}</p>
           </SectionPanel>
         ) : (
-          <Outlet />
+          <Outlet key={`segment-step:${jobId}`} />
         )}
       </main>
     </DigitizationJobProvider>

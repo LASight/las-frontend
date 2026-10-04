@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { HttpAuthGateway } from "./auth-service";
-import { ApiError, apiRequest } from "./http-client";
+import { API_BASE, ApiError, apiRequest } from "./http-client";
 import { clearSession, getAccessToken, getMediaToken, setSession } from "./token-store";
 
 /**
@@ -13,8 +13,6 @@ import { clearSession, getAccessToken, getMediaToken, setSession } from "./token
  * backend rotates refresh tokens, so the second request presents one the first
  * has already revoked.
  */
-
-const API_BASE = "http://127.0.0.1:8000";
 
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
