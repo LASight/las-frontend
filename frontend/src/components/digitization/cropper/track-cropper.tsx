@@ -134,6 +134,7 @@ export function TrackCropper({
     image,
     view,
     viewport,
+    revision: job.geometry_revision,
   });
 
   // ---- Measurement ------------------------------------------------------
@@ -517,6 +518,7 @@ export function TrackCropper({
 
           <ScanMinimap
             jobId={job.job_id}
+            revision={job.geometry_revision}
             fileName={job.file_name}
             image={image}
             crop={crop}

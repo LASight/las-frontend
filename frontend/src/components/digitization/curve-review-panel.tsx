@@ -8,6 +8,7 @@ import type { ReviewTool } from "../../hooks/use-curve-review";
 import styles from "./curve-review-panel.module.css";
 import { PredictionControls, type PredictionControlsProps } from "./prediction-controls";
 import { REVIEW_TOOLS } from "./review-tools";
+import { effectiveCurveSize } from "../../controllers/grid-alignment-controller";
 
 /**
  * Tools, corrections and quality figures for the review step.
@@ -56,7 +57,7 @@ export function CurveReviewPanel({
   showPrediction, onShowPredictionChange, predictionOpacity, onPredictionOpacityChange,
 }: Props) {
   const calibration = job.calibration;
-  const cropHeight = job.crop ? job.crop.y_bottom - job.crop.y_top : 0;
+  const cropHeight = effectiveCurveSize(job).height;
   const quality = job.quality;
 
   function depthLabel(row: number): string {

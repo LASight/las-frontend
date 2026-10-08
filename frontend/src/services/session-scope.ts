@@ -18,7 +18,7 @@ export function isCurrentSession(expected: SessionScope): boolean {
 
 /** Old unscoped keys are intentionally neither read, copied nor removed.
  * Their ownership cannot be established from a local filename/job ID alone. */
-export function accountDraftKey(kind: "review" | "input" | "collection" | "output", api: string, id: string): string | undefined {
+export function accountDraftKey(kind: "review" | "input" | "collection" | "output" | "alignment", api: string, id: string): string | undefined {
   if (!scope.accountId) return undefined;
   return `digitization-${kind}-draft:${api}:account:${encodeURIComponent(scope.accountId)}:${id}`;
 }

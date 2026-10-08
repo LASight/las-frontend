@@ -52,6 +52,8 @@ interface Options {
    */
   origin?: { x: number; y: number };
   layer?: TileLayer;
+  revision?: string;
+  cacheRevision?: number;
 }
 
 export function useLodTiles({
@@ -61,6 +63,8 @@ export function useLodTiles({
   viewport,
   origin,
   layer = "raster",
+  revision,
+  cacheRevision,
 }: Options) {
   const credential = tileCredentialKey();
   // A request belongs to a pyramid, not to one render of the viewport. Panning
@@ -71,7 +75,7 @@ export function useLodTiles({
     failures: new Map<string, number>(),
     errors: new Map<string, string>(),
     needed: new Set<string>(),
-  }), [jobId, layer, origin?.x, origin?.y, image.width, image.height, credential]);
+  }), [jobId, layer, origin?.x, origin?.y, image.width, image.height, credential, revision, cacheRevision]);
   const active = useRef(false);
   const [version, setVersion] = useState(0);
 
@@ -98,6 +102,8 @@ export function useLodTiles({
         image,
         origin: { x: originX, y: originY },
         layer,
+        revision,
+        cacheRevision,
       }),
     [
       firstCol,
@@ -107,6 +113,8 @@ export function useLodTiles({
       span,
       level,
       layer,
+      revision,
+      cacheRevision,
       originX,
       originY,
       image,
@@ -131,7 +139,7 @@ export function useLodTiles({
           const url = digitizationGateway.tileUrl(jobId, {
             x0: tile.sourceX0, x1: tile.sourceX1,
             y0: tile.sourceY0, y1: tile.sourceY1,
-            scale: 1 / 2 ** tile.level, layer,
+            scale: 1 / 2 ** tile.level, layer, revision, cacheRevision,
           });
           if (!url) throw new Error("Tile URL unavailable.");
           const bitmap = await loadImage(url);
@@ -157,7 +165,7 @@ export function useLodTiles({
         }
       })();
     }
-  }, [jobId, needed, layer, pyramid, version]);
+  }, [jobId, needed, layer, revision, cacheRevision, pyramid, version]);
 
   const retry = useCallback(() => {
     pyramid.failures.clear();

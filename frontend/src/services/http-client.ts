@@ -66,6 +66,7 @@ async function errorMessage(response: Response): Promise<string> {
     const body = await response.json();
     const detail = body?.detail;
     if (typeof detail === "string") return detail;
+    if (detail && typeof detail === "object" && typeof detail.message === "string") return detail.message;
     // Pydantic validation errors arrive as a list of {loc, msg}.
     if (Array.isArray(detail) && detail.length > 0) {
       return detail

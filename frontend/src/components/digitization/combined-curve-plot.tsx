@@ -3,6 +3,7 @@ import { identityIssue } from "../../controllers/curve-queue-controller";
 import { useCurveReview } from "../../hooks/use-curve-review";
 import type { CollectionSummary, JobSummary } from "../../models/digitization-models";
 import styles from "../../workspaces/curve-workspace.module.css";
+import { effectiveCurveSize } from "../../controllers/grid-alignment-controller";
 
 const COLORS = ["var(--track-colors-1)", "var(--track-colors-2)", "var(--track-colors-3)", "var(--track-colors-4)"];
 
@@ -36,16 +37,16 @@ export function CombinedCurvePlot({ collection }: { collection: CollectionSummar
 function Trace({ job, color, top, bottom, min, max }: { job: JobSummary; color: string; top: number; bottom: number; min: number; max: number }) {
   const review = useCurveReview(job);
   if (review.error) return <text x="68" y="620" fontSize="11" fill="var(--danger)">A segment could not be loaded: {review.error}</text>;
-  const crop = job.crop!;
+  const frame = effectiveCurveSize(job);
   const cal = job.calibration!;
   let d = "";
   let connected = false;
   for (let row = 0; row < review.x.length; row++) {
     if (review.x[row] === null || !Number.isFinite(review.x[row])) { connected = false; continue; }
-    const value = pixelToValue(review.x[row], cal, crop.x_right - crop.x_left, job.settings?.wrap_policy !== "unwrap");
+    const value = pixelToValue(review.x[row], cal, frame.width, job.settings?.wrap_policy !== "unwrap");
     if (value === null) { connected = false; continue; }
     const x = 68 + (value - min) / (max - min || 1) * 287;
-    const y = 48 + (rowToDepth(row, cal, crop.y_bottom - crop.y_top) - top) / (bottom - top || 1) * 554;
+    const y = 48 + (rowToDepth(row, cal, frame.height) - top) / (bottom - top || 1) * 554;
     d += `${connected ? "L" : "M"}${x.toFixed(2)},${y.toFixed(2)} `;
     connected = true;
   }

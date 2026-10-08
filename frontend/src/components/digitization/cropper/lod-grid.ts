@@ -107,8 +107,10 @@ export function lodTilesForRange(options: {
   image: Size;
   origin?: { x: number; y: number };
   layer?: string;
+  revision?: string;
+  cacheRevision?: number;
 }): LodTileSpec[] {
-  const { range, level, image, origin, layer = "raster" } = options;
+  const { range, level, image, origin, layer = "raster", revision, cacheRevision } = options;
   if (!range) return [];
 
   const originX = origin?.x ?? 0;
@@ -125,7 +127,7 @@ export function lodTilesForRange(options: {
       tiles.push({
         // The origin is part of the identity: the same grid cell means
         // different raster pixels after a re-crop.
-        key: `${layer}:${originX},${originY}:${level}:${col}:${row}`,
+        key: `${layer}:${originX},${originY}:${level}:${col}:${row}${revision === undefined ? "" : `:revision:${revision}`}${cacheRevision === undefined ? "" : `:publication:${cacheRevision}`}`,
         level,
         x0,
         y0,

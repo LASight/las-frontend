@@ -9,7 +9,8 @@ import {
 import type { ReviewTool } from "../../hooks/use-curve-review";
 import type { CurveSeries } from "../../controllers/curve-edit-controller";
 import type { CurveEdit, JobSummary } from "../../models/digitization-models";
-import { drawCurveOverlay, overlayRuns, REVIEW_OVERLAY_STYLE } from "./curve-overlay";
+import { drawCurveOverlay, overlayRuns, projectOverlayRuns, REVIEW_OVERLAY_STYLE } from "./curve-overlay";
+import { effectiveCurveSize, projectAlignedPoint, projectedBandPolygon } from "../../controllers/grid-alignment-controller";
 import { useTemporaryPan } from "./cropper/use-temporary-pan";
 import { useLodTiles } from "./cropper/use-lod-tiles";
 import { ZOOM_STEP, usePanZoom } from "./cropper/use-pan-zoom";
@@ -110,22 +111,25 @@ export function RasterViewport({
   const [size, setSize] = useState({ width: 0, height: 0 });
   const [cursor, setCursor] = useState<{ row: number; x: number } | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [rasterView, setRasterView] = useState<"aligned" | "original">("aligned");
 
   const crop = job.crop;
   const calibration = job.calibration;
 
-  const cropWidth = crop ? crop.x_right - crop.x_left : job.raster.width;
-  const cropHeight = crop ? crop.y_bottom - crop.y_top : job.raster.height;
+  const originalInspection = !!job.alignment && rasterView === "original";
+  const frame = effectiveCurveSize(job);
+  const cropWidth = frame.width || job.raster.width;
+  const cropHeight = frame.height || job.raster.height;
   /** Absolute raster pixel that crop-local (0, 0) sits on. */
   const cropOrigin = useMemo(
-    () => ({ x: crop?.x_left ?? 0, y: crop?.y_top ?? 0 }),
-    [crop?.x_left, crop?.y_top]
+    () => job.alignment ? { x: 0, y: 0 } : ({ x: crop?.x_left ?? 0, y: crop?.y_top ?? 0 }),
+    [crop?.x_left, crop?.y_top, job.alignment]
   );
 
   /** The crop is the image, as far as this canvas is concerned. */
   const image = useMemo(
-    () => ({ width: cropWidth, height: cropHeight }),
-    [cropWidth, cropHeight]
+    () => originalInspection ? ({ width: job.raster.width, height: job.raster.height }) : ({ width: cropWidth, height: cropHeight }),
+    [cropWidth, cropHeight, originalInspection, job.raster.width, job.raster.height]
   );
 
   const pan = usePanZoom({
@@ -134,6 +138,7 @@ export function RasterViewport({
     targetRef: containerRef,
     // Dragging here is the edit gesture, so the wheel has to stay travel.
     wheel: "pan",
+    frameKey: job.alignment ? `${job.geometry_revision ?? job.alignment.revision}:${originalInspection ? "source" : "aligned"}` : undefined,
   });
   const { view } = pan;
 
@@ -142,17 +147,20 @@ export function RasterViewport({
     image,
     view,
     viewport: size,
-    origin: cropOrigin,
-    layer: "raster",
+    origin: originalInspection ? undefined : cropOrigin,
+    layer: job.alignment && !originalInspection ? "aligned" : "raster",
+    revision: job.geometry_revision,
   });
 
   const mask = useLodTiles({
-    jobId: showMask && job.quality ? job.job_id : undefined,
+    jobId: showMask && job.quality && !originalInspection ? job.job_id : undefined,
     image,
     view,
     viewport: size,
     // No origin: the backend already returns the mask in crop-local pixels.
     layer: "mask",
+    revision: job.geometry_revision,
+    cacheRevision: job.edits_revision,
   });
 
   // Publish the jump-to-row operation to the parent. Centres the target rather
@@ -160,8 +168,8 @@ export function RasterViewport({
   // gap and not just its first row.
   const centerOnRow = pan.centerOnRow;
   useEffect(() => {
-    registerJump?.(centerOnRow);
-  }, [registerJump, centerOnRow]);
+    registerJump?.((row) => centerOnRow(originalInspection && job.alignment ? projectAlignedPoint(job.alignment, job.alignment.width / 2, row)?.y ?? 0 : row));
+  }, [registerJump, centerOnRow, originalInspection, job.alignment]);
 
   useEffect(() => {
     const element = containerRef.current;
@@ -177,8 +185,8 @@ export function RasterViewport({
   }, []);
 
   const valueTicks = useMemo(
-    () => (calibration ? buildValueTicks(calibration, cropWidth, 5) : []),
-    [calibration, cropWidth]
+    () => (calibration && !originalInspection ? buildValueTicks(calibration, cropWidth, 5) : []),
+    [calibration, cropWidth, originalInspection]
   );
 
   /** Crop-local rectangle currently on screen. */
@@ -186,6 +194,10 @@ export function RasterViewport({
     () => visibleImageRect(view, image, size),
     [view, image, size]
   );
+  // Projection is display-only and shared across pan/zoom frames. Keeping the
+  // full-resolution point list avoids downsampling NULL breaks on tall scans.
+  const originalRuns = useMemo(() => originalInspection && job.alignment ? projectOverlayRuns(overlayRuns(x, 0, x.length, edits), job.alignment) : [], [originalInspection, job.alignment, x, edits]);
+  const originalGapPolygons = useMemo(() => originalInspection && job.alignment ? gaps.map((gap) => projectedBandPolygon(job.alignment!, gap.y0, gap.y1)) : [], [originalInspection, job.alignment, gaps]);
 
   // ---- Draw -------------------------------------------------------------
   useEffect(() => {
@@ -228,7 +240,7 @@ export function RasterViewport({
     drawTiles(scan.tiles);
 
     // 2. The predicted mask, tinted, so grid latching is visible by eye.
-    if (showMask) {
+    if (showMask && !originalInspection) {
       context.save();
       context.globalAlpha = 0.55;
       context.globalCompositeOperation = "multiply";
@@ -256,7 +268,12 @@ export function RasterViewport({
     // 4. Unrecovered bands — where the LAS will carry -999.25. Drawn before the
     //    curve so the trace stays legible on top of them.
     context.fillStyle = COLORS.gapBand;
-    for (const gap of gaps) {
+    for (const [gapIndex, gap] of gaps.entries()) {
+      if (originalInspection && job.alignment) {
+        const polygon = originalGapPolygons[gapIndex];
+        context.beginPath(); polygon.forEach((p, i) => { if (!i) context.moveTo(p.x * scale + tx, p.y * scale + ty); else context.lineTo(p.x * scale + tx, p.y * scale + ty); }); context.closePath(); context.fill();
+        continue;
+      }
       const top = gap.y0 * scale + ty;
       const height = (gap.y1 - gap.y0) * scale;
       if (top + height < 0 || top > size.height) continue;
@@ -265,9 +282,10 @@ export function RasterViewport({
 
     // 5. The corrected curve. Broken at unrecovered rows rather than bridged:
     //    a continuous line across a gap would claim data that does not exist.
-    const firstRow = Math.max(0, Math.floor(visible.y0) - 1);
-    const lastRow = Math.min(x.length, Math.ceil(visible.y1) + 1);
-    drawCurveOverlay(context, overlayRuns(x, firstRow, lastRow, edits), view, { showPrediction, predictionOpacity });
+    const firstRow = originalInspection ? 0 : Math.max(0, Math.floor(visible.y0) - 1);
+    const lastRow = originalInspection ? x.length : Math.min(x.length, Math.ceil(visible.y1) + 1);
+    const runs = originalInspection ? originalRuns : overlayRuns(x, firstRow, lastRow, edits);
+    drawCurveOverlay(context, runs, view, { showPrediction, predictionOpacity });
 
     // 6. The in-progress stroke, so a redraw is visible while it is happening.
     if (isDragging && strokeRef.current.length > 1) {
@@ -309,6 +327,10 @@ export function RasterViewport({
     cropWidth,
     cursor,
     isDragging,
+    originalInspection,
+    job.alignment,
+    originalRuns,
+    originalGapPolygons,
   ]);
 
   // ---- Pointer ----------------------------------------------------------
@@ -340,7 +362,7 @@ export function RasterViewport({
     event.currentTarget.setPointerCapture(event.pointerId);
     // Inspect is the neutral tool, so there dragging pans. Under an edit tool
     // the drag belongs to the edit, and the middle button pans instead.
-    if (tool === "inspect" || event.button === 1 || temporaryPan.pressed.current) {
+    if (originalInspection || tool === "inspect" || event.button === 1 || temporaryPan.pressed.current) {
       gesture.current = { pointerId: event.pointerId, kind: "pan" };
       pan.beginPan(localPoint(event));
       return;
@@ -374,7 +396,7 @@ export function RasterViewport({
     const samples = [...strokeRef.current];
     const startRow = dragStartRow.current;
     cancelGesture();
-    if (tool === "inspect") return;
+    if (originalInspection || tool === "inspect") return;
     if (active.kind === "redraw" && samples.length > 1) {
       onStroke(samples);
     } else if (active.kind === "discard" && startRow !== null && samples.length > 0) {
@@ -394,14 +416,14 @@ export function RasterViewport({
   }
 
   const cursorDepth =
-    cursor && calibration ? rowToDepth(cursor.row, calibration, cropHeight) : null;
+    cursor && calibration && !originalInspection ? rowToDepth(cursor.row, calibration, cropHeight) : null;
   const cursorValue =
-    cursor && calibration ? pixelToValue(cursor.x, calibration, cropWidth) : null;
+    cursor && calibration && !originalInspection ? pixelToValue(cursor.x, calibration, cropWidth) : null;
 
-  const topDepth = calibration
+  const topDepth = calibration && !originalInspection
     ? rowToDepth(visible.y0, calibration, cropHeight)
     : null;
-  const bottomDepth = calibration
+  const bottomDepth = calibration && !originalInspection
     ? rowToDepth(visible.y1, calibration, cropHeight)
     : null;
 
@@ -412,6 +434,10 @@ export function RasterViewport({
 
   return (
     <div className={styles.wrapper}>
+      {job.alignment && <><label className={styles.toolbar}><strong>Saved grid alignment</strong> · View <select aria-label="Review raster view" value={rasterView} onChange={(e) => { cancelGesture(); setCursor(null); setRasterView(e.target.value as "original" | "aligned"); }}><option value="aligned">Aligned · edit canonical grid</option><option value="original">Original · working raster · Pan / Inspect only</option></select></label>
+        {job.preprocess?.applied.length ? <p>Original view uses the preprocessed working raster, not the exact uploaded image. The uploaded source is unchanged.</p> : null}
+        {originalInspection && <p role="status">Edit in Aligned view. Original shows projected traces and NULL bands only. The aligned model mask cannot be projected here and is disabled. Values outside the unwrapped grid are displayed in Aligned only.</p>}
+      </>}
       <div className={styles.toolbar}>
         <div className={styles.depthRange}>
           {topDepth !== null && bottomDepth !== null && calibration ? (
@@ -462,7 +488,7 @@ export function RasterViewport({
               {cursorValue.toFixed(1)} {calibration.value_unit}
             </>
           ) : (
-            "Move the pointer over the track"
+            originalInspection && cursor ? `Working raster X ${cursor.x.toFixed(1)} · Y ${cursor.row}` : "Move the pointer over the track"
           )}
         </div>
       </div>
@@ -470,7 +496,7 @@ export function RasterViewport({
       <div className={styles.legend} aria-label="Review overlay legend">
         <span><i style={{ background: REVIEW_OVERLAY_STYLE.prediction }} />Prediction{!showPrediction || predictionOpacity === 0 ? " (hidden)" : ` (${predictionOpacity}%)`}</span>
         <span><i style={{ background: REVIEW_OVERLAY_STYLE.manual }} />Manual redraw</span>
-        <span><i className={styles.maskSwatch} />Model mask{!showMask && " (hidden)"}</span>
+        <span><i className={styles.maskSwatch} />Model mask{originalInspection ? " (disabled in Original)" : !showMask && " (hidden)"}</span>
         <span><i className={styles.nullSwatch} />NULL / discarded</span>
       </div>
 
@@ -485,7 +511,7 @@ export function RasterViewport({
             style={{
               cursor: pan.isPanning
                 ? "grabbing"
-                : tool === "inspect" || temporaryPan.active
+                : originalInspection || tool === "inspect" || temporaryPan.active
                   ? "grab"
                   : "cell",
             }}
@@ -510,9 +536,11 @@ export function RasterViewport({
         <ScanMinimap
           jobId={job.job_id}
           fileName={job.file_name}
-          image={{ width: job.raster.width, height: job.raster.height }}
+          image={job.alignment && !originalInspection ? image : { width: job.raster.width, height: job.raster.height }}
+          revision={job.geometry_revision}
+          layer={job.alignment && !originalInspection ? "aligned" : "raster"}
           crop={
-            crop ?? {
+            job.alignment && !originalInspection ? { x_left: 0, x_right: cropWidth, y_top: 0, y_bottom: cropHeight } : crop ?? {
               x_left: 0,
               x_right: job.raster.width,
               y_top: 0,

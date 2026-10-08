@@ -6,7 +6,7 @@
 .focusSegment { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 11px; }
 .focusSegment[hidden] { display: none; }
 .focusSegment select { max-width: 260px; padding: 6px; border: 1px solid var(--line-strong); background: var(--surface-inset); color: var(--ink); border-radius: var(--radius-control); font: inherit; }
-.focusView { position: fixed; inset: 0; z-index: 1000; height: 100dvh; width: 100%; --digitization-stage-height: calc(100dvh - 260px); --digitization-stage-min-height: 240px; }
+.focusView { position: fixed; inset: 0; z-index: 1000; height: 100dvh; width: 100%; box-sizing: border-box; --digitization-stage-height: calc(100dvh - 260px); --digitization-stage-min-height: 240px; }
 .focusView .header { position: sticky; top: 0; z-index: 40; background: var(--body-bg); }
 .focusView .layout { grid-template-columns: minmax(0, 1fr); }
 .focusView .rail { display: none; }
@@ -36,6 +36,7 @@
 .inspectorTop { min-height: 36px; padding: 4px 8px; border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; gap: 8px; color: var(--muted); font-size: 11px; }
 .inspectorBody { padding: 12px; display: flex; flex-direction: column; gap: 12px; }
 .inspectorBody[hidden] { display: none; }
+.inspectorBody:has([data-grid-alignment-panel]), .focusView .inspectorBody:has([data-grid-alignment-panel]) { overflow: visible; max-height: none; }
 .inspectorCollapsed .inspectorTop { justify-content: center; padding: 4px; }
 .fields { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 8px; }
 .field { display: flex; flex-direction: column; gap: 5px; min-width: 0; font-size: 11px; color: var(--muted); }

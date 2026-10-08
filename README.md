@@ -1,5 +1,9 @@
 # las-frontend — the WellSight / LASight web app
 
+> **New optional Align grid candidate:** [manual calibration of distorted scans](docs/grid-alignment.md).
+> Existing jobs remain compatible. Corrections use Aligned view; Original projects
+> the same trace for inspection. This is not automatic geological interpretation.
+
 > **This repo is the frontend only.** The API lives in the sibling
 > [`las-backend`](../las-backend) repo and must be running for anything here to
 > work (or use [mock mode](#mock-mode)).

@@ -16,6 +16,7 @@
 # JS / frontend tooling
 # -----------------------------
 node_modules/
+node_modules
 frontend/dist/
 *.tsbuildinfo
 npm-debug.log*

@@ -70,6 +70,7 @@ export function ReviewStep() {
           discarded depths export as NULL rather than as a guess.
         </p>
         <p role="status">{review.isSaving ? "Saving corrections…" : review.hasUnsavedEdits ? "Corrections not saved." : "Corrections saved."}</p>
+        {review.hasIncompatibleLegacyDraft && <p className={styles.notice}>Older crop-frame corrections are retained locally, but cannot be applied to saved aligned geometry without frame provenance.</p>}
         {review.hasLegacyDraft && <button type="button" disabled={review.isSaving || review.hasUnsavedEdits} onClick={() => {
           if (window.confirm("Recover older local corrections after verifying access to this segment? The original draft and revision are retained. An existing account draft is never overwritten.")) void review.recoverLegacyEdits();
         }}>Recover older corrections</button>}

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 
 import {
   depthPerRow,
@@ -13,6 +14,12 @@ import {
 import { SectionPanel } from "../../section-panel";
 import { useJobController } from "../job-context";
 import styles from "./step-layout.module.css";
+import { effectiveCurveSize } from "../../../controllers/grid-alignment-controller";
+import { StandaloneGridAlignment } from "../standalone-grid-alignment";
+import { digitizationGateway } from "../../../services/digitization-service";
+import { flushCollectionEdits } from "../../../hooks/use-review-edits";
+import { curveQueryKey } from "../../../hooks/use-curve-review";
+import { getSessionScope, isCurrentSession } from "../../../services/session-scope";
 
 /**
  * Step 3 — enter the track scale and depth range.
@@ -31,16 +38,19 @@ import styles from "./step-layout.module.css";
 export function CalibrationStep() {
   const navigate = useNavigate();
   const { job, setCalibration } = useJobController();
+  const client = useQueryClient();
 
   const [calibration, setLocal] = useState<TrackCalibration | null>(null);
+  const [geometryBusy, setGeometryBusy] = useState(false);
+  const [calibrationBusy, setCalibrationBusy] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!job || calibration) return;
     setLocal(job.calibration ?? DEFAULT_CALIBRATION);
   }, [job, calibration]);
 
-  const cropWidth = job?.crop ? job.crop.x_right - job.crop.x_left : 0;
-  const cropHeight = job?.crop ? job.crop.y_bottom - job.crop.y_top : 0;
+  const { width: cropWidth, height: cropHeight } = effectiveCurveSize(job);
 
   const validation = useMemo(
     () =>
@@ -54,6 +64,26 @@ export function CalibrationStep() {
 
   const step = depthPerRow(calibration, cropHeight);
   const interval = calibration.depth_bottom - calibration.depth_top;
+  const busy = geometryBusy || calibrationBusy || setCalibration.isPending || job.phase === "segmenting";
+  async function saveCalibration(continueToSegment: boolean) {
+    if (!job || !calibration || busy) return;
+    const session = getSessionScope(); setCalibrationBusy(true); setSaveError(null);
+    try {
+      const latest = await digitizationGateway.getJob(job.job_id);
+      if (!isCurrentSession(session)) return;
+      if (latest.phase === "segmenting") throw new Error("Wait for processing to finish before recalibrating.");
+      if (job.geometry_revision && latest.geometry_revision !== job.geometry_revision) throw new Error("Source geometry changed. Reload the job before saving this calibration.");
+      const changed = JSON.stringify(calibration) !== JSON.stringify(latest.calibration);
+      if (changed && (latest.quality || latest.edits?.length || latest.alignment) && !window.confirm(latest.geometry_revision ? "Change this saved calibration? This segment's current work will be archived and its active result cleared. Saved alignment requires the same first/last reference depths and unit; disable alignment first to change those. Continue?" : "Change this saved calibration? This reinterprets recovered values and invalidates the current LAS. Verify these values against the scan. Continue?")) return;
+      await flushCollectionEdits(client, [latest]);
+      if (!isCurrentSession(session)) return;
+      const saved = await setCalibration.mutateAsync(calibration);
+      if (!isCurrentSession(session)) return;
+      if (!saved.quality || saved.geometry_revision !== latest.geometry_revision) client.removeQueries({ queryKey: curveQueryKey(job.job_id) });
+      if (continueToSegment) navigate(`/digitize/${job.job_id}/segment`);
+    } catch (err) { if (isCurrentSession(session)) setSaveError(err instanceof Error ? err.message : "Calibration could not be saved."); }
+    finally { if (isCurrentSession(session)) setCalibrationBusy(false); }
+  }
 
   function update<K extends keyof TrackCalibration>(key: K, value: TrackCalibration[K]) {
     setLocal((previous) => (previous ? { ...previous, [key]: value } : previous));
@@ -74,6 +104,7 @@ export function CalibrationStep() {
           id={`cal-${key}`}
           className={`${styles.input} ${error ? styles.inputInvalid : ""}`}
           type="number"
+          disabled={busy}
           step="any"
           value={calibration![key]}
           onChange={(event) => update(key, Number(event.target.value))}
@@ -108,6 +139,7 @@ export function CalibrationStep() {
             </label>
             <select
               id="cal-scale"
+              disabled={busy}
               className={styles.select}
               value={calibration.scale}
               onChange={(event) =>
@@ -128,6 +160,7 @@ export function CalibrationStep() {
             </label>
             <input
               id="cal-mnemonic"
+              disabled={busy}
               className={`${styles.input} ${validation.errors.mnemonic ? styles.inputInvalid : ""}`}
               value={calibration.mnemonic}
               onChange={(event) => update("mnemonic", event.target.value)}
@@ -143,6 +176,7 @@ export function CalibrationStep() {
             </label>
             <input
               id="cal-value-unit"
+              disabled={busy}
               className={`${styles.input} ${validation.errors.value_unit ? styles.inputInvalid : ""}`}
               value={calibration.value_unit}
               onChange={(event) => update("value_unit", event.target.value)}
@@ -159,6 +193,7 @@ export function CalibrationStep() {
             <button
               key={preset.label}
               type="button"
+              disabled={busy}
               className={styles.secondaryBtn}
               onClick={() =>
                 setLocal((previous) =>
@@ -176,14 +211,13 @@ export function CalibrationStep() {
 
       <SectionPanel title="Depth range">
         <p className={styles.intro}>
-          The depths at the top and bottom of the crop you selected — not of the whole
-          scan. They must increase downward: an interpretation suite rejects a LAS whose
+          {job.alignment ? "The depths of the first and last printed grid reference lines — not the enclosing crop margins." : "The depths at the top and bottom of the crop you selected — not of the whole scan."} They must increase downward: an interpretation suite rejects a LAS whose
           depth index is not strictly increasing.
         </p>
 
         <div className={styles.fieldGrid}>
-          {numericField("depth_top", "Depth at the top of the crop")}
-          {numericField("depth_bottom", "Depth at the bottom of the crop")}
+          {numericField("depth_top", job.alignment ? "First reference depth" : "Depth at the top of the crop")}
+          {numericField("depth_bottom", job.alignment ? "Last reference depth" : "Depth at the bottom of the crop")}
 
           <div className={styles.field}>
             <label className={styles.label} htmlFor="cal-depth-unit">
@@ -191,6 +225,7 @@ export function CalibrationStep() {
             </label>
             <select
               id="cal-depth-unit"
+              disabled={busy}
               className={styles.select}
               value={calibration.depth_unit}
               onChange={(event) => update("depth_unit", event.target.value)}
@@ -211,7 +246,7 @@ export function CalibrationStep() {
             </span>
           </div>
           <div className={styles.summaryItem}>
-            <span className={styles.summaryLabel}>Crop height</span>
+            <span className={styles.summaryLabel}>{job.alignment ? "Aligned height" : "Crop height"}</span>
             <span className={styles.summaryValue}>{cropHeight.toLocaleString()} rows</span>
           </div>
           <div className={styles.summaryItem}>
@@ -232,30 +267,30 @@ export function CalibrationStep() {
         {setCalibration.error instanceof Error && (
           <p className={styles.error}>{setCalibration.error.message}</p>
         )}
+        {saveError && <p role="alert" className={styles.error}>{saveError}</p>}
 
         <div className={styles.actions}>
           <button
             type="button"
             className={styles.secondaryBtn}
+            disabled={busy}
             onClick={() => navigate(`/digitize/${job.job_id}/crop`)}
           >
             Back
           </button>
           <div className={styles.spacer} />
+          <button type="button" className={styles.secondaryBtn} disabled={!validation.isValid || busy} onClick={() => void saveCalibration(false)}>Save calibration</button>
           <button
             type="button"
             className={styles.primaryBtn}
-            disabled={!validation.isValid || setCalibration.isPending}
-            onClick={() =>
-              setCalibration.mutate(calibration, {
-                onSuccess: () => navigate(`/digitize/${job.job_id}/segment`),
-              })
-            }
+            disabled={!validation.isValid || busy}
+            onClick={() => void saveCalibration(true)}
           >
-            {setCalibration.isPending ? "Saving…" : "Continue to segmentation"}
+            {busy ? "Saving…" : "Continue to segmentation"}
           </button>
         </div>
       </SectionPanel>
+      <SectionPanel title="Manual grid alignment (optional)"><StandaloneGridAlignment key={job.job_id} job={job} locked={calibrationBusy || setCalibration.isPending} onBusyChange={setGeometryBusy} calibrationChanged={JSON.stringify(calibration) !== JSON.stringify(job.calibration)} /></SectionPanel>
     </>
   );
 }

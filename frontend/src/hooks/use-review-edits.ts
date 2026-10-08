@@ -13,11 +13,17 @@ import { jobQueryKey } from "./use-digitization-job";
 const stores = new WeakMap<QueryClient, Map<string, ReviewEditsStore>>();
 const empty = new ReviewEditsStore([], async () => undefined, "");
 
+/** Aligned drafts belong to their exact canonical geometry. Ordinary/legacy
+ * jobs keep their existing namespace; old draft data is never moved/deleted. */
+export function reviewDraftKey(job: JobSummary) {
+  return accountDraftKey("review", API_BASE, job.alignment ? `${job.job_id}:aligned:${encodeURIComponent(job.geometry_revision ?? job.alignment.revision)}` : job.job_id);
+}
+
 function jobEditsStore(client: QueryClient, job: JobSummary): ReviewEditsStore {
   bindQuerySession(client);
   const session = getSessionScope();
-  const storeId = `${session.generation}:${job.job_id}`;
-  const key = accountDraftKey("review", API_BASE, job.job_id);
+  const storeId = `${session.generation}:${job.job_id}:${job.geometry_revision ?? job.alignment?.revision ?? "legacy"}`;
+  const key = reviewDraftKey(job);
   let jobs = stores.get(client);
   if (!jobs) { jobs = new Map(); stores.set(client, jobs); }
   let state = jobs.get(storeId);
@@ -54,7 +60,7 @@ export function useReviewEdits(job: JobSummary | null) {
   const store = useMemo(() => {
     if (!job) return empty;
     return jobEditsStore(client, job);
-  }, [client, job?.job_id, session.generation]);
+  }, [client, job?.job_id, job?.geometry_revision, job?.alignment?.revision, session.generation]);
   const state = useSyncExternalStore(store.subscribe, store.getSnapshot);
   useEffect(() => {
     if (job) store.reconcile(job.edits ?? [], job.edits_revision);
@@ -74,12 +80,22 @@ export function useReviewEdits(job: JobSummary | null) {
   }, [store, client, job?.job_id]);
   const recoverLegacy = useCallback(async () => {
     if (!job || store.getSnapshot().saving || store.getSnapshot().dirty) return;
+    if (job.alignment) {
+      store.reportError(new Error("Older corrections have no aligned-frame provenance and cannot be applied here. Their local data is retained."));
+      return;
+    }
     try {
       const raw = await recoverLegacyDraft("review", job.job_id,
         () => digitizationGateway.getJob(job.job_id), (value) => parseReviewDraft(value)?.edits_revision !== undefined);
       if (isCurrentSession(session)) store.recoverDraft(raw);
     } catch (error) { if (isCurrentSession(session)) store.reportError(error); }
   }, [store, job?.job_id, session]);
-  return { ...state, update: store.update, flush: store.flush, restoreSaved, recoverLegacy,
-    hasLegacyDraft: !!job && hasLegacyDraft("review", job.job_id) };
+  // Reconciliation publishes in an effect. Use newer acknowledged server edits
+  // immediately, so a returning canonical frame cannot paint an archived
+  // overlay for one frame before that effect runs. Dirty drafts stay explicit.
+  const visible = !state.dirty && !state.saving && job?.edits_revision !== undefined && job.edits_revision > (state.edits_revision ?? -1)
+    ? { ...state, edits: job.edits ?? [], edits_revision: job.edits_revision } : state;
+  return { ...visible, update: store.update, flush: store.flush, restoreSaved, recoverLegacy,
+    hasLegacyDraft: !!job && !job.alignment && hasLegacyDraft("review", job.job_id),
+    hasIncompatibleLegacyDraft: !!job?.alignment && hasLegacyDraft("review", job.job_id) };
 }

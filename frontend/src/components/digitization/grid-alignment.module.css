@@ -1,0 +1,41 @@
+.toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: .4rem; padding: .5rem; }
+.panelFrame { display: flex; flex-direction: column; height: max(440px, calc(100dvh - 260px)); }
+.panel { display: flex; flex: 1; flex-direction: column; gap: 12px; min-height: 100px; overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; padding-right: 8px; }
+.panel > * { flex-shrink: 0; }
+.panel p { margin: 0; }
+.steps { display: flex; flex-direction: column; gap: 6px; list-style: none; padding: 0; margin: 0; color: var(--muted); font-size: 11px; }
+.steps li[aria-current="step"] { color: var(--accent-teal); font-weight: 600; }
+.example { width: 100%; height: 100px; color: var(--muted); background: var(--surface-inset); border: 1px solid var(--line); border-radius: var(--radius-panel); font-size: 10px; }
+.pointNumber { fill: #1e2a30; font-weight: bold; }
+.lineChoices { display: flex; flex-direction: column; gap: 5px; }
+.lineChoices button { display: flex; flex: 0 0 auto; align-items: center; justify-content: space-between; gap: 8px; min-height: 44px; text-align: left; }
+.lineChoices button span { min-width: 0; overflow-wrap: anywhere; }
+.lineChoices button[aria-current="step"] { border-color: var(--accent-teal); background: var(--surface-raised); }
+.lineChoices small { color: var(--muted); font-size: 10px; white-space: nowrap; flex-shrink: 0; }
+.currentLine, .finish { display: flex; flex-direction: column; gap: 10px; padding-top: 12px; border-top: 1px solid var(--line); font-size: 12px; }
+.finish { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); flex-shrink: 0; gap: 6px; margin-top: 8px; background: var(--surface); }
+.finish strong, .finish p, .finish > button:last-child { grid-column: 1 / -1; }
+.finish button { min-width: 0; }
+.finish p { margin: 0; font-size: 11px; }
+.comparisonImage { position: absolute; max-width: none; pointer-events: none; user-select: none; }
+.currentLine { display: block; }
+.currentLine summary { cursor: pointer; font-weight: 600; }
+.lineControls { display: flex; flex-direction: column; gap: 10px; padding-top: 10px; }
+.prompt { color: var(--accent-teal); font-size: 12px; line-height: 1.5; }
+.guide { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; padding: 10px 12px; border-left: 3px solid var(--accent-teal); background: var(--surface-raised); font-size: 12px; }
+.guide span { color: var(--muted); font-size: 11px; line-height: 1.5; }
+.previewStage { position: absolute; inset: 0; background: var(--surface-inset); padding: 12px; overflow: auto; }
+.previewImage { display: block; margin: 0 auto; max-width: none; }
+.toolbar button { font: inherit; font-size: .75rem; padding: .3rem .45rem; background: var(--surface, white); color: var(--ink); border: 1px solid var(--line, #d7dde4); border-radius: 4px; cursor: pointer; }
+.toolbar button[aria-pressed="true"] { border-color: var(--accent-teal); color: var(--accent-teal); }
+.hint { font-size: .78rem; color: var(--muted); margin: .5rem; }
+.host { height: clamp(360px, 65vh, 850px); min-height: 240px; position: relative; overflow: hidden; background: #e9edf2; touch-action: none; }
+.guidedHost { height: max(240px, calc(100dvh - 410px)); }
+.canvas { width: 100%; height: 100%; display: block; touch-action: none; }
+.loading, .tileError { position: absolute; bottom: .5rem; left: .5rem; background: white; padding: .5rem; font-size: .8rem; }
+.line { border: 1px solid var(--line, #d7dde4); padding: .65rem; margin: 0; border-radius: var(--radius-panel, 6px); font-size: 11px; }
+.reference { display: grid; grid-template-columns: 1fr 1fr; gap: .4rem; margin-top: .5rem; }
+.reference label { display: grid; gap: .3rem; font-size: .75rem; }
+.reference input { width: 100%; min-width: 0; box-sizing: border-box; padding: 7px 8px; background: var(--surface-inset); color: var(--ink); border: 1px solid var(--line-strong); border-radius: var(--radius-control); font: 12px var(--font-data); }
+.preview { display: block; max-width: 100%; max-height: 400px; object-fit: contain; background: white; }
+@media (max-width: 950px) { .panelFrame { height: auto; } .panel { max-height: none; overflow-y: visible; scrollbar-gutter: auto; padding-right: 0; } .finish { position: sticky; bottom: 0; background: var(--surface); padding-bottom: 8px; z-index: 2; } }

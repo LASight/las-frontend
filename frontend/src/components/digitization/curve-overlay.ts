@@ -1,4 +1,5 @@
-import type { CurveEdit } from "../../models/digitization-models";
+import type { CurveEdit, SavedGridAlignment } from "../../models/digitization-models";
+import { projectAlignedPoint } from "../../controllers/grid-alignment-controller";
 import type { ViewTransform } from "./cropper/viewport-transform";
 
 /** Screen/CSS-pixel widths: context uses DPR, coordinates use view transform.
@@ -40,6 +41,21 @@ export function overlayRuns(x: readonly (number | null)[], firstRow: number, las
 }
 
 export interface OverlayPresentation { showPrediction?: boolean; predictionOpacity?: number }
+
+/** Project each retained row; never connect across NULL or off-mesh unwraps. */
+export function projectOverlayRuns(runs: OverlayRun[], alignment: SavedGridAlignment): OverlayRun[] {
+  const projected: OverlayRun[] = [];
+  for (const run of runs) {
+    let current: OverlayRun | null = null;
+    for (const point of run.points) {
+      const source = projectAlignedPoint(alignment, point.x, point.row);
+      if (!source) { current = null; continue; }
+      if (!current) { current = { kind: run.kind, points: [] }; projected.push(current); }
+      current.points.push({ x: source.x, row: source.y });
+    }
+  }
+  return projected;
+}
 
 export function drawCurveOverlay(context: CanvasRenderingContext2D, runs: OverlayRun[], view: ViewTransform, presentation: OverlayPresentation = {}): void {
   const opacity = Number.isFinite(presentation.predictionOpacity ?? 100) ? Math.max(0, Math.min(100, presentation.predictionOpacity ?? 100)) / 100 : 1;

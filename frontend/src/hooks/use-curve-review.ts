@@ -15,6 +15,7 @@ import {
 import type { JobSummary } from "../models/digitization-models";
 import { digitizationGateway } from "../services/digitization-service";
 import { useReviewEdits } from "./use-review-edits";
+import { effectiveCurveSize } from "../controllers/grid-alignment-controller";
 
 /**
  * The human-in-the-loop correction state for one digitized curve.
@@ -33,8 +34,8 @@ import { useReviewEdits } from "./use-review-edits";
 /** What the reviewer is doing with a drag on the canvas. */
 export type ReviewTool = "inspect" | "redraw" | "discard";
 
-export function curveQueryKey(jobId: string) {
-  return ["digitization", "curve", jobId] as const;
+export function curveQueryKey(jobId: string, geometryRevision?: string) {
+  return geometryRevision === undefined ? ["digitization", "curve", jobId] as const : ["digitization", "curve", jobId, geometryRevision] as const;
 }
 
 export function useCurveReview(job: JobSummary | null) {
@@ -47,11 +48,10 @@ export function useCurveReview(job: JobSummary | null) {
   const [showPrediction, setShowPrediction] = useState(true);
   const [predictionOpacity, setPredictionOpacity] = useState(100);
   const [status, setStatus] = useState("");
-  const cropRows = job?.crop ? job.crop.y_bottom - job.crop.y_top : 0;
-  const cropWidth = job?.crop ? job.crop.x_right - job.crop.x_left : 0;
+  const { height: cropRows, width: cropWidth } = effectiveCurveSize(job);
 
   const query = useQuery({
-    queryKey: curveQueryKey(jobId ?? ""),
+    queryKey: curveQueryKey(jobId ?? "", job?.geometry_revision ?? job?.alignment?.revision),
     queryFn: () => digitizationGateway.getCurve(jobId as string),
     enabled: !!jobId && job?.phase !== "segmenting" && !!job?.quality,
     // The model's output for a given job never changes; only the edits on top
@@ -126,6 +126,7 @@ export function useCurveReview(job: JobSummary | null) {
     restoreSavedEdits: persistence.restoreSaved,
     recoverLegacyEdits: persistence.recoverLegacy,
     hasLegacyDraft: persistence.hasLegacyDraft,
+    hasIncompatibleLegacyDraft: persistence.hasIncompatibleLegacyDraft,
     isSaving: persistence.saving,
     saveError: persistence.error,
     hasUnsavedEdits: persistence.dirty,

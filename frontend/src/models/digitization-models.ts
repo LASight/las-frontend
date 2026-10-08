@@ -32,7 +32,29 @@ export type ScaleType = "linear" | "log";
  */
 export type WrapPolicy = "null" | "unwrap" | "ignore";
 
-export type TileLayer = "raster" | "mask";
+export type TileLayer = "raster" | "mask" | "aligned";
+
+/** Full working-raster coordinates (the raster tile frame, after preprocessing). */
+export interface GridPoint { x: number; y: number }
+export interface GridAnchor { left: GridPoint; right: GridPoint; depth: number }
+export interface GridAlignmentSpec { anchors: GridAnchor[]; depth_unit: "FT" | "M" }
+export interface SavedGridAlignment extends GridAlignmentSpec {
+  width: number;
+  height: number;
+  algorithm: "bilinear-bands-v1";
+  revision: string;
+}
+export interface GridAlignmentPreview {
+  alignment: SavedGridAlignment;
+  preview_png_base64: string;
+  preview_width: number;
+  preview_height: number;
+}
+export interface AlignmentRevisionRequest {
+  expected_geometry_revision: string;
+  expected_edits_revision: number;
+  acknowledge_reset: boolean;
+}
 
 export interface RasterInfo {
   width: number;
@@ -218,6 +240,10 @@ export interface JobSummary {
   detection: TrackDetection | null;
   crop: TrackCrop | null;
   calibration: TrackCalibration | null;
+  /** Optional only for compatibility with servers without manual alignment. */
+  alignment?: SavedGridAlignment | null;
+  geometry_revision?: string;
+  alignment_history_count?: number;
   settings: SegmentationSettings | null;
   progress: SegmentationProgress | null;
   quality: CurveQuality | null;

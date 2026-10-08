@@ -24,6 +24,11 @@ import { WorkspaceInspector } from "./workspace-inspector";
 import { TrackHeading } from "./track-heading";
 import { PredictionControls } from "./prediction-controls";
 import { REVIEW_TOOLS } from "./review-tools";
+import { useGridAlignment } from "../../hooks/use-grid-alignment";
+import type { ReferenceSide } from "../../controllers/grid-alignment-controller";
+import { effectiveCurveSize } from "../../controllers/grid-alignment-controller";
+import { GridReferenceViewport } from "./grid-reference-viewport";
+import { GridAlignmentPanel } from "./grid-alignment-panel";
 
 type CalibrationDraft = Record<keyof TrackCalibration, string>;
 export type SegmentDraft = { crop: TrackCrop; touched: boolean; calibration: CalibrationDraft };
@@ -83,6 +88,10 @@ export function CurveSegmentEditor({ initialJob, collection, view, drafts, onDra
   const [selectedProposal, setSelectedProposal] = useState<number | null>(null);
   const [copyFrom, setCopyFrom] = useState("");
   const [renameBusy, setRenameBusy] = useState(false);
+  const [alignmentOpen, setAlignmentOpen] = useState(false);
+  const [placingReference, setPlacingReference] = useState(false);
+  const [referenceTarget, setReferenceTarget] = useState<{ index: number; side: ReferenceSide }>({ index: 0, side: "left" });
+  const grid = useGridAlignment(job, onSaved);
   useEffect(() => {
     drafts.set(job.job_id, draft); onDraftChange();
     if (!inputDraftKey || !isCurrentSession(session)) return;
@@ -96,7 +105,7 @@ export function CurveSegmentEditor({ initialJob, collection, view, drafts, onDra
   }, [draft, drafts, job.job_id, inputDraftKey, session]);
 
   const calibration = parseCalibration(draft.calibration);
-  const validation = validateCalibration(calibration, job.crop ? job.crop.x_right - job.crop.x_left : 0);
+  const validation = validateCalibration(calibration, effectiveCurveSize(job).width);
   const compatible = identityIssue({ ...collection, segments: collection.segments.map((segment) => segment.job_id === job.job_id ? { ...segment, job: { ...job, calibration } } : segment) });
   const disabled = locked || job.phase === "segmenting";
   const cropChanged = JSON.stringify(draft.crop) !== JSON.stringify(job.crop);
@@ -105,11 +114,12 @@ export function CurveSegmentEditor({ initialJob, collection, view, drafts, onDra
     mutationFn: async (kind: "crop" | "cal") => {
       const latest = await digitizationGateway.getJob(job.job_id);
       if (latest.phase === "segmenting") throw new Error("Wait for this segment to finish processing.");
-      if ((latest.quality || (latest.edits?.length ?? 0) > 0) && !window.confirm("Changing this crop or calibration will remove this segment's prediction and corrections. Other segments are preserved. Continue?")) return null;
+      if (job.geometry_revision && latest.geometry_revision !== job.geometry_revision) throw new Error("Source geometry changed. Reload the segment before saving these inputs.");
+      if ((latest.quality || latest.alignment || (latest.edits?.length ?? 0) > 0) && !window.confirm(latest.geometry_revision ? "Changing this crop or calibration will archive this segment's current work and clear its active result. Crop changes also disable saved grid alignment. Other segments are preserved. Continue?" : "Changing this crop or calibration will remove this segment's prediction and corrections. Other segments are preserved. Continue?")) return null;
       await flushCollectionEdits(client, [latest]);
       // The calibration endpoint alone retains the old arrays. Explicitly
       // invalidate through crop before changing a processed calibration.
-      if (kind === "cal" && latest.quality) {
+      if (kind === "cal" && latest.quality && !latest.geometry_revision) {
         const reset = await digitizationGateway.setCrop(job.job_id, latest.crop!);
         onSaved(reset);
         client.removeQueries({ queryKey: curveQueryKey(job.job_id) });
@@ -119,7 +129,7 @@ export function CurveSegmentEditor({ initialJob, collection, view, drafts, onDra
     onSuccess: (saved, kind) => {
       if (!saved) return;
       onSaved(saved);
-      client.removeQueries({ queryKey: curveQueryKey(saved.job_id) });
+      if (saved.geometry_revision !== job.geometry_revision || !saved.quality || !job.geometry_revision) client.removeQueries({ queryKey: curveQueryKey(saved.job_id) });
       setDraft((previous) => ({ ...previous, crop: saved.crop ?? previous.crop, touched: true,
         calibration: kind === "cal" ? calibrationDraft(saved.calibration) : previous.calibration }));
       if (kind === "crop") setView("cal");
@@ -127,14 +137,21 @@ export function CurveSegmentEditor({ initialJob, collection, view, drafts, onDra
     onError: () => { void query.refetch(); },
   });
   const detection = useMutation({ mutationFn: () => digitizationGateway.detectTracks(job.job_id), onSuccess: onSaved });
-  useEffect(() => { onBusyChange(save.isPending || renameBusy || legacyRecoveryBusy); }, [save.isPending, renameBusy, legacyRecoveryBusy, onBusyChange]);
+  useEffect(() => { onBusyChange(save.isPending || renameBusy || legacyRecoveryBusy || grid.saving); }, [save.isPending, renameBusy, legacyRecoveryBusy, grid.saving, onBusyChange]);
   useEffect(() => () => onBusyChange(false), [onBusyChange]);
   function updateCal(key: keyof TrackCalibration, value: string) {
     setDraft((previous) => ({ ...previous, calibration: { ...previous.calibration, [key]: value } }));
   }
-  const busy = disabled || save.isPending || renameBusy || legacyRecoveryBusy;
+  const busy = disabled || save.isPending || renameBusy || legacyRecoveryBusy || grid.saving;
   const identitySource = collection.segments.find((segment) => segment.job_id !== job.job_id && segment.job.calibration);
   if (view === "review" && job.quality && job.phase !== "segmenting") return <SegmentReview key={`review:${job.job_id}`} job={job} collection={collection} locked={locked || save.isPending} onRenameBusyChange={setRenameBusy} />;
+  if (view === "cal" && alignmentOpen) return <div className={styles.editor}>
+    <section className={styles.canvas}><TrackHeading calibration={job.calibration} /><GridReferenceViewport onMoveReference={(index, side, point) => grid.update((d) => ({ ...d, anchors: d.anchors.map((a, i) => i === index ? { ...a, [side]: { x: String(point.x), y: String(point.y), confirmed: true } } : a) }))} guided preview={grid.preview} job={job} draft={grid.draft} target={referenceTarget} placing={placingReference} disabled={busy} onCancelPlace={() => setPlacingReference(false)} onPlace={(point) => {
+      grid.update((previous) => ({ ...previous, anchors: previous.anchors.map((anchor, index) => index === referenceTarget.index ? { ...anchor, [referenceTarget.side]: { x: String(point.x), y: String(point.y), confirmed: true } } : anchor) }));
+      if (referenceTarget.side === "left") { setReferenceTarget({ ...referenceTarget, side: "right" }); setPlacingReference(true); } else setPlacingReference(false);
+    }} /></section>
+    <WorkspaceInspector><GridAlignmentPanel job={job} grid={grid} disabled={disabled || save.isPending || renameBusy || legacyRecoveryBusy} calibrationChanged={calibrationChanged || cropChanged} target={referenceTarget} onTargetChange={setReferenceTarget} placing={placingReference} onPlacingChange={setPlacingReference} onClose={() => setAlignmentOpen(false)} /></WorkspaceInspector>
+  </div>;
   const showCrop = view === "crop" || view === "review";
   return <div className={styles.editor}>
     <section className={styles.canvas}>
@@ -175,13 +192,16 @@ export function CurveSegmentEditor({ initialJob, collection, view, drafts, onDra
         }}>Use curve identity</button>}
         <h2>Scale and depth anchors</h2>
         <div className={styles.fields}>
-          {([['value_min', 'Left value'], ['value_max', 'Right value'], ['depth_top', 'Top depth'], ['depth_bottom', 'Bottom depth']] as const).map(([key, label]) => <label className={styles.field} key={`cal-field:${key}`} htmlFor={`cal-${key}`}>{label}<input id={`cal-${key}`} type="number" step="any" disabled={busy} value={draft.calibration[key]} onChange={(event) => updateCal(key, event.target.value)} /></label>)}
+          {([['value_min', 'Left value'], ['value_max', 'Right value'], ['depth_top', 'Top depth'], ['depth_bottom', 'Bottom depth']] as const).map(([key, label]) => <label className={styles.field} key={`cal-field:${key}`} htmlFor={`cal-${key}`}>{job.alignment && key === "depth_top" ? "First reference depth" : job.alignment && key === "depth_bottom" ? "Last reference depth" : label}<input id={`cal-${key}`} type="number" step="any" disabled={busy} value={draft.calibration[key]} onChange={(event) => updateCal(key, event.target.value)} /></label>)}
           <label className={styles.field} htmlFor="cal-scale">Scale<select id="cal-scale" disabled={busy} value={draft.calibration.scale} onChange={(e) => updateCal("scale", e.target.value)}><option value="linear">Linear</option><option value="log">Logarithmic</option></select></label>
           <label className={styles.field} htmlFor="cal-depth-unit">Depth unit<select id="cal-depth-unit" disabled={busy} value={draft.calibration.depth_unit} onChange={(e) => updateCal("depth_unit", e.target.value)}><option value="">Choose…</option><option value="FT">FT</option><option value="M">M</option></select></label>
         </div>
         <p className={styles.muted}>Read scale and depths from this segment. Shared mnemonic and units; independent anchors.</p>
         {compatible && <p role="alert" className={styles.error}>{compatible}</p>}
         <button id="save-segment-calibration" className={styles.primary} disabled={busy || !job.crop || cropChanged || !validation.isValid || !calibration.depth_unit || !!compatible || !calibrationChanged} onClick={() => save.mutate("cal")}>{save.isPending ? "Saving…" : "Save calibration"}</button>
+        <button id="align-segment-grid" type="button" className={styles.secondary} disabled={busy || !job.crop} onClick={() => setAlignmentOpen(true)}>Align grid… (optional)</button>
+        <p className={styles.muted}>Tilted or drifting printed grid? Align grid guides you through marking its top and bottom lines. Skip it when the grid is already straight.</p>
+        {job.alignment && <p className={styles.muted}>Saved grid alignment · {job.alignment.anchors.length} depth lines. Reference depths define the ends, not the crop margins.</p>}
         {calibrationChanged && <details className={styles.help}><summary>Validation</summary>{Object.entries(validation.errors).map(([key, message]) => <p key={`validation:${key}`}>{message}</p>)}</details>}
         <details className={styles.help}><summary>Copy scale from another segment</summary>
           <select aria-label="Scale source segment" value={copyFrom} onChange={(e) => setCopyFrom(e.target.value)}><option value="">Choose segment…</option>{collection.segments.filter((s) => s.job_id !== job.job_id && s.job.calibration).map((s) => <option key={`copy:${s.job_id}`} value={s.job_id}>{s.label}</option>)}</select>
@@ -229,13 +249,14 @@ function SegmentReview({ job, collection, locked, onRenameBusyChange }: { job: J
       <span className={styles.muted}>{(job.quality!.coverage * 100).toFixed(1)}% recovered rows · {review.edits.length} corrections</span>
       <div className={styles.actions}><button className={styles.secondary} disabled={locked || !review.canUndo} onClick={review.undo}>Undo</button><button className={styles.secondary} disabled={locked || !review.canUndo} onClick={() => { if (window.confirm("Remove this segment's corrections and restore the original prediction?")) review.reset(); }}>Restore prediction</button></div>
       <p role="status" className={styles.muted}>{review.isSaving ? "Saving corrections…" : review.hasUnsavedEdits ? "Unsaved corrections" : "Corrections saved"}</p>
+      {review.hasIncompatibleLegacyDraft && <p className={styles.notice}>Older crop-frame corrections are retained locally, but cannot be applied to saved aligned geometry without frame provenance.</p>}
       {review.hasLegacyDraft && <button className={styles.secondary} disabled={locked || review.isSaving || review.hasUnsavedEdits} onClick={() => {
         if (window.confirm("Recover older local corrections after verifying access to this segment? Their original revision is retained; conflicts require an explicit decision. The original local draft is kept, and an account draft is never overwritten.")) void review.recoverLegacyEdits();
       }}>Recover older corrections</button>}
       {review.saveError && <div role="alert" className={styles.error}>{review.saveError}<button className={styles.secondary} onClick={() => void review.flushEdits().catch(() => {})}>Retry saving</button><button className={styles.secondary} disabled={review.isSaving} onClick={() => { if (window.confirm("Discard the local draft and load the saved corrections?")) void review.restoreSavedEdits(); }}>Load saved corrections</button></div>}
       {!!review.gaps.length && <details className={styles.help}><summary>NULL intervals ({review.gaps.length})</summary>{review.gaps.slice(0, 50).map((gap) => <button className={styles.secondary} key={`review-gap:${gap.y0}`} onClick={() => jump.current?.(gap.y0)}>Rows {gap.y0} – {gap.y1}</button>)}</details>}
       <p className={styles.muted}>{review.status}</p>
-      <details className={styles.help}><summary>Review tools</summary><p>Pan / Inspect travels without editing. Redraw follows the original ink; Mark missing sets an explicit depth interval to NULL, never erasing the TIFF. Space + drag or middle mouse temporarily pans. Scroll travels, Shift + scroll moves horizontally, and Ctrl/Cmd + scroll or pinch zooms. Escape cancels an active gesture before exiting focus view. Corrections are saved per segment with revision checks, never exported separately. Recovered rows are not accuracy or confidence.</p></details>
+      <details className={styles.help}><summary>Review tools</summary><p>Pan / Inspect travels without editing. {job.alignment ? "Edit in Aligned view; Original is inspection-only with projected overlays." : "Redraw follows the original ink."} Mark missing sets an explicit depth interval to NULL, never erasing the TIFF. Space + drag or middle mouse temporarily pans. Scroll travels, Shift + scroll moves horizontally, and Ctrl/Cmd + scroll or pinch zooms. Escape cancels an active gesture before exiting focus view. Corrections are saved per segment with revision checks, never exported separately. Recovered rows are not accuracy or confidence.</p></details>
     </WorkspaceInspector>
   </div>;
 }

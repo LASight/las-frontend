@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import type { TrackCrop } from "../../models/digitization-models";
+import type { TileLayer, TrackCrop } from "../../models/digitization-models";
 import { digitizationGateway } from "../../services/digitization-service";
 import styles from "./scan-minimap.module.css";
 import type { Size } from "./cropper/viewport-transform";
@@ -32,6 +32,8 @@ type Props = {
   window: { y0: number; y1: number } | null;
   /** Jump the stage so this row is centred. */
   onSeek: (row: number) => void;
+  revision?: string;
+  layer?: TileLayer;
 };
 
 /**
@@ -50,6 +52,8 @@ export function ScanMinimap({
   crop,
   window: depthWindow,
   onSeek,
+  revision,
+  layer,
 }: Props) {
   const hostRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ width: 0, height: 0 });
@@ -78,13 +82,15 @@ export function ScanMinimap({
     return digitizationGateway.tileUrl(jobId, {
       y0: 0,
       y1: image.height,
+      revision,
+      layer,
       // Per-axis, and by wildly different factors. A uniform scale that fits
       // 55,000 rows into 500 pixels would also reduce a 2,700 px raster to a
       // 25 px sliver — the backend has to be told about both axes separately.
       scaleX: Math.min(1, quantize(size.width) / Math.max(1, image.width)),
       scaleY: Math.min(1, quantize(size.height) / image.height),
     });
-  }, [jobId, image.width, image.height, size.width, size.height]);
+  }, [jobId, image.width, image.height, size.width, size.height, revision, layer]);
 
   /** Image row under a client y position. */
   const rowAt = useCallback(

@@ -56,6 +56,8 @@ interface Options {
    * document viewer behaves, and a trackpad pinch arrives as exactly that.
    */
   wheel?: "zoom" | "pan";
+  /** Independent cameras for source/canonical frames in one mounted viewer. */
+  frameKey?: string;
 }
 
 export function usePanZoom({
@@ -63,6 +65,7 @@ export function usePanZoom({
   viewport,
   targetRef,
   wheel = "zoom",
+  frameKey,
 }: Options) {
   const [view, setViewState] = useState<ViewTransform>(() =>
     initialView(image, viewport)
@@ -73,6 +76,8 @@ export function usePanZoom({
   const frameRef = useRef<number | null>(null);
   const panOriginRef = useRef<Point | null>(null);
   const initializedRef = useRef(false);
+  const activeFrame = useRef(frameKey);
+  const cameras = useRef(new Map<string, ViewTransform>());
 
   /**
    * Commit a new view: clamp it, record it synchronously, publish it next frame.
@@ -112,13 +117,20 @@ export function usePanZoom({
   // would throw away the user's zoom every time the window changed.
   useEffect(() => {
     if (image.width <= 0 || viewport.width <= 0) return;
+    if (frameKey !== activeFrame.current) {
+      if (activeFrame.current !== undefined && initializedRef.current) cameras.current.set(activeFrame.current, viewRef.current);
+      activeFrame.current = frameKey;
+      initializedRef.current = true;
+      set(clampView(frameKey === undefined ? initialView(image, viewport) : cameras.current.get(frameKey) ?? initialView(image, viewport), image, viewport));
+      return;
+    }
     if (!initializedRef.current) {
       initializedRef.current = true;
       set(initialView(image, viewport));
       return;
     }
     set(clampView(viewRef.current, image, viewport));
-  }, [image, viewport, set]);
+  }, [image, viewport, set, frameKey]);
 
   const reset = useCallback(() => {
     set(initialView(image, viewport));

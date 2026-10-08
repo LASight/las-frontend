@@ -1,6 +1,9 @@
 import type {
   CurveEdit,
   CurveWindow,
+  GridAlignmentSpec,
+  GridAlignmentPreview,
+  AlignmentRevisionRequest,
   DigitizationHealth,
   ExportRequest,
   JobSummary,
@@ -57,6 +60,9 @@ export interface DigitizationGateway {
   detectTracks(jobId: string): Promise<JobSummary>;
   setCrop(jobId: string, crop: TrackCrop): Promise<JobSummary>;
   setCalibration(jobId: string, calibration: TrackCalibration): Promise<JobSummary>;
+  previewAlignment?(jobId: string, request: GridAlignmentSpec & { expected_geometry_revision: string }): Promise<GridAlignmentPreview>;
+  saveAlignment?(jobId: string, request: GridAlignmentSpec & AlignmentRevisionRequest): Promise<JobSummary>;
+  deleteAlignment?(jobId: string, request: AlignmentRevisionRequest): Promise<JobSummary>;
 
   startSegmentation(jobId: string, settings: SegmentationSettings): Promise<JobSummary>;
 
@@ -79,6 +85,8 @@ export interface DigitizationGateway {
       scaleX?: number;
       scaleY?: number;
       layer?: TileLayer;
+      revision?: string;
+      cacheRevision?: number;
     }
   ): string;
 }
@@ -135,6 +143,23 @@ export class HttpDigitizationGateway implements DigitizationGateway {
     return postJson<JobSummary>(`${BASE}/jobs/${jobId}/segment`, settings);
   }
 
+  previewAlignment(jobId: string, request: GridAlignmentSpec & { expected_geometry_revision: string }): Promise<GridAlignmentPreview> {
+    if (!request.expected_geometry_revision?.trim()) return Promise.reject(new Error("Grid alignment requires a geometry revision. Reload the job or upgrade the digitization API."));
+    return postJson<GridAlignmentPreview>(`${BASE}/jobs/${jobId}/alignment/preview`, request);
+  }
+
+  saveAlignment(jobId: string, request: GridAlignmentSpec & AlignmentRevisionRequest): Promise<JobSummary> {
+    if (!request.expected_geometry_revision?.trim()) return Promise.reject(new Error("Grid alignment requires a geometry revision. Reload the job or upgrade the digitization API."));
+    return postJson<JobSummary>(`${BASE}/jobs/${jobId}/alignment`, request);
+  }
+
+  deleteAlignment(jobId: string, request: AlignmentRevisionRequest): Promise<JobSummary> {
+    if (!request.expected_geometry_revision?.trim()) return Promise.reject(new Error("Grid alignment requires a geometry revision. Reload the job or upgrade the digitization API."));
+    return apiRequest<JobSummary>(`${BASE}/jobs/${jobId}/alignment`, {
+      method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify(request),
+    });
+  }
+
   getCurve(
     jobId: string,
     options: { y0?: number; y1?: number; stride?: number } = {}
@@ -184,6 +209,8 @@ export class HttpDigitizationGateway implements DigitizationGateway {
       scaleX?: number;
       scaleY?: number;
       layer?: TileLayer;
+      revision?: string;
+      cacheRevision?: number;
     }
   ): string {
     const params = new URLSearchParams({
@@ -196,6 +223,10 @@ export class HttpDigitizationGateway implements DigitizationGateway {
     if (options.scaleX !== undefined) params.set("scale_x", options.scaleX.toFixed(4));
     if (options.scaleY !== undefined) params.set("scale_y", options.scaleY.toFixed(4));
     if (options.layer) params.set("layer", options.layer);
+    if (options.revision !== undefined) params.set("revision", options.revision);
+    // Prediction publication advances edits_revision even when geometry is
+    // unchanged. This cache buster is not the geometry concurrency guard.
+    if (options.cacheRevision !== undefined) params.set("cache_revision", String(options.cacheRevision));
 
     // The credential goes last so it does not disturb the readability of a URL
     // that gets read a lot in the network tab while debugging tiling.
